@@ -48,24 +48,28 @@ module SampleModels
         if cd = SampleModels.configured_defaults[self][name.to_sym]
           default_att_value = cd
         else
-          default_att_value = case column.type
-            when :binary, :string
-              "Test #{ column.name }"
-            when :boolean
-              true
-            when :date
-              Date.today
-            when :datetime
-              Time.now.utc
-            when :integer
-              1
-            else
-              raise "No default value for type #{ column.type.inspect }"
-          end
+          default_att_value = unconfigured_default_for column
         end
         default_atts[name.to_sym] = default_att_value
       end
       default_atts
+    end
+    
+    def unconfigured_default_for( column )
+      case column.type
+        when :binary, :string, :text
+          "Test #{ column.name }"
+        when :boolean
+          true
+        when :date
+          Date.today
+        when :datetime
+          Time.now.utc
+        when :integer
+          1
+        else
+          raise "No default value for type #{ column.type.inspect }"
+      end
     end
   end
 end

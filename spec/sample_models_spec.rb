@@ -14,6 +14,7 @@ silence_stream(STDOUT) do
     create_table 'users', :force => true do |user|
       user.string 'login', 'password', 'homepage'
       user.date 'birthday'
+      user.text 'bio'
     end
   end
 end
@@ -35,6 +36,7 @@ describe "User.default_sample" do
   
   it "should set text fields by default starting with 'test '" do
     @user.password.should == 'Test password'
+    @user.bio.should == 'Test bio'
   end
   
   it "should set homepage to a configured default" do
