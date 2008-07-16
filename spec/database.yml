@@ -5,6 +5,3 @@ mysql:
   password: test
   database: sample_models_test
 
-memory:
-  adapter: sqlite3
-  database: ":memory:"

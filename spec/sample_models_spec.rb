@@ -6,7 +6,7 @@ require File.dirname(__FILE__) + '/../lib/sample_models'
 # Configure ActiveRecord
 config = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
 ActiveRecord::Base.logger = Logger.new(File.dirname(__FILE__) + '/debug.log')
-ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'memory'])
+ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 
 # Create the DB schema
 silence_stream(STDOUT) do
@@ -46,6 +46,17 @@ describe "User.default_sample" do
   it "should return the same instance after multiple calls" do
     user_prime = User.default_sample
     @user.object_id.should == user_prime.object_id
+  end
+end
+
+describe "User.without_default_sample" do
+  it 'should setup a context without the default sample' do
+    User.default_sample
+    initial_user_count = User.count
+    User.without_default_sample do
+      User.count.should ==( initial_user_count - 1 )
+    end
+    User.count.should == initial_user_count
   end
 end
 

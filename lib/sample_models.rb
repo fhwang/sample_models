@@ -38,7 +38,16 @@ module SampleModels
     end
     
     def default_sample
-      SampleModels.default_samples[self] ||= create( default_sample_attrs )
+      if ds = SampleModels.default_samples[self]
+        begin
+          ds.reload
+        rescue ActiveRecord::RecordNotFound
+          SampleModels.default_samples[self] = create( default_sample_attrs )
+        end
+      else
+        SampleModels.default_samples[self] = create( default_sample_attrs )
+      end
+      SampleModels.default_samples[self]
     end
     
     def default_sample_attrs
@@ -70,6 +79,13 @@ module SampleModels
         else
           raise "No default value for type #{ column.type.inspect }"
       end
+    end
+    
+    def without_default_sample
+      ds = SampleModels.default_samples[self]
+      ds.destroy if ds
+      yield
+      ds.clone.save if ds
     end
   end
 end
