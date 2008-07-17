@@ -30,6 +30,25 @@ SampleModels.configure User do |u|
 end
 
 # Actual specs start here ...
+describe "User.custom_sample" do
+  it 'should allow overrides of all fields' do
+    user = User.custom_sample(
+      :homepage => 'http://mysite.com/', :password => 'myownpassword'
+    )
+    user.homepage.should == 'http://mysite.com/'
+    user.password.should == 'myownpassword'
+  end
+  
+  it 'should defer evaluation of field defaults if a block is passed in' do
+    user1 = User.custom_sample
+    user1.creation_note.should match( /^Started at/ )
+    sleep 1
+    user2 = User.custom_sample
+    user2.creation_note.should match( /^Started at/ )
+    user1.creation_note.should_not == user2.creation_note
+  end
+end
+
 describe "User.default_sample" do
   before :all do
     @user = User.default_sample
@@ -50,6 +69,17 @@ describe "User.default_sample" do
   end
 end
 
+describe 'User.destroy_all' do
+  it 'should clear out the cached instance' do
+    default_user1 = User.default_sample
+    User.destroy_all
+    User.count.should == 0
+    default_user2 = User.default_sample
+    User.count.should == 1
+    default_user1.id.should_not == default_user2.id
+  end
+end
+
 describe "User.without_default_sample" do
   it 'should setup a context without the default sample' do
     User.default_sample
@@ -61,21 +91,3 @@ describe "User.without_default_sample" do
   end
 end
 
-describe "User.custom_sample" do
-  it 'should allow overrides of all fields' do
-    user = User.custom_sample(
-      :homepage => 'http://mysite.com/', :password => 'myownpassword'
-    )
-    user.homepage.should == 'http://mysite.com/'
-    user.password.should == 'myownpassword'
-  end
-  
-  it 'should defer evaluation of field defaults if a block is passed in' do
-    user1 = User.custom_sample
-    user1.creation_note.should match( /^Started at/ )
-    sleep 1
-    user2 = User.custom_sample
-    user2.creation_note.should match( /^Started at/ )
-    user1.creation_note.should_not == user2.creation_note
-  end
-end
