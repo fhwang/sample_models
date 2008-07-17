@@ -92,7 +92,17 @@ module SampleModels
         when :datetime
           Time.now.utc
         when :integer
-          1
+          belongs_to_assocs = reflect_on_all_associations.select { |assoc|
+            assoc.macro == :belongs_to
+          }
+          assoc = belongs_to_assocs.detect { |a|
+            a.primary_key_name == column.name
+          }
+          if assoc
+            Module.const_get( assoc.class_name ).default_sample
+          else
+            1
+          end
         else
           raise "No default value for type #{ column.type.inspect }"
       end

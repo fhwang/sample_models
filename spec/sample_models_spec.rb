@@ -11,8 +11,13 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 # Create the DB schema
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
+    create_table 'bad_samples', :force => true do |bad_sample|
+      bad_sample.string 'title'
+    end
+    
     create_table 'blog_posts', :force => true do |blog_post|
-      blog_post.string 'title'
+      blog_post.integer 'user_id'
+      blog_post.string  'title'
     end
 
     create_table 'users', :force => true do |user|
@@ -24,16 +29,20 @@ silence_stream(STDOUT) do
 end
 
 # Define ActiveRecord classes
-class BlogPost < ActiveRecord::Base
+class BadSample < ActiveRecord::Base
   validates_presence_of :title
+end
+
+class BlogPost < ActiveRecord::Base
+  belongs_to :user
 end
 
 class User < ActiveRecord::Base
 end
 
 # SampleModel configuration
-SampleModels.configure BlogPost do |bp|
-  bp.title ''
+SampleModels.configure BadSample do |b|
+  b.title ''
 end
 
 SampleModels.configure User do |u|
@@ -43,12 +52,37 @@ SampleModels.configure User do |u|
 end
 
 # Actual specs start here ...
-describe 'BlogPost.default_sample' do
+describe 'BadSample.default_sample' do
   it "should raise an error since it won't validate" do
-    BlogPost.destroy_all
-    lambda { BlogPost.default_sample }.should raise_error(
-      RuntimeError, /Problem creating BlogPost sample/
+    BadSample.destroy_all
+    lambda { BadSample.default_sample }.should raise_error(
+      RuntimeError, /Problem creating BadSample sample/
     )
+  end
+end
+
+describe 'BlogPost.default_sample' do
+  it 'should include associated models' do
+    blog_post = BlogPost.default_sample
+    blog_post.user.should == User.default_sample
+  end
+end
+
+describe 'BlogPost.custom_sample' do
+  describe 'with a custom user' do
+    it 'should set the custom user' do
+      user = User.custom_sample
+      blog_post = BlogPost.custom_sample :user => user
+      blog_post.user.should_not == User.default_sample
+    end
+  end
+  
+  describe 'with a custom user_id' do
+    it 'should set the custom user' do
+      user = User.custom_sample
+      blog_post = BlogPost.custom_sample :user_id => user.id
+      blog_post.user.should_not == User.default_sample
+    end
   end
 end
 
