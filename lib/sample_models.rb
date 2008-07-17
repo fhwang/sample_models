@@ -20,7 +20,11 @@ module SampleModels
   
     def method_missing( meth, *args )
       if @domain_class.column_names.include?( meth.to_s )
-        SampleModels.configured_defaults[@domain_class][meth] = args.first
+        default = args.first
+        unless default
+          default = Proc.new do; yield; end
+        end
+        SampleModels.configured_defaults[@domain_class][meth] = default
       else
         super
       end
@@ -55,6 +59,7 @@ module SampleModels
       columns_hash.each do |name, column|
         default_att_value = nil
         if cd = SampleModels.configured_defaults[self][name.to_sym]
+          cd = cd.call if cd.is_a?( Proc )
           default_att_value = cd
         else
           default_att_value = unconfigured_default_for column

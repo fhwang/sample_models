@@ -12,7 +12,7 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
     create_table 'users', :force => true do |user|
-      user.string 'login', 'password', 'homepage'
+      user.string 'login', 'password', 'homepage', 'creation_note'
       user.date 'birthday'
       user.text 'bio'
     end
@@ -25,7 +25,8 @@ end
 
 # SampleModel configuration
 SampleModels.configure User do |u|
-  u.homepage 'http://www.test.com/'
+  u.creation_note { "Started at #{ Time.now.to_s }" }
+  u.homepage      'http://www.test.com/'
 end
 
 # Actual specs start here ...
@@ -67,5 +68,14 @@ describe "User.custom_sample" do
     )
     user.homepage.should == 'http://mysite.com/'
     user.password.should == 'myownpassword'
+  end
+  
+  it 'should defer evaluation of field defaults if a block is passed in' do
+    user1 = User.custom_sample
+    user1.creation_note.should match( /^Started at/ )
+    sleep 1
+    user2 = User.custom_sample
+    user2.creation_note.should match( /^Started at/ )
+    user1.creation_note.should_not == user2.creation_note
   end
 end
