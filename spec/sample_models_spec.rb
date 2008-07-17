@@ -11,25 +11,47 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 # Create the DB schema
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
+    create_table 'blog_posts', :force => true do |blog_post|
+      blog_post.string 'title'
+    end
+
     create_table 'users', :force => true do |user|
+      user.date   'birthday'
       user.string 'login', 'password', 'homepage', 'creation_note'
-      user.date 'birthday'
-      user.text 'bio'
+      user.text   'bio', 'irc_nick'
     end
   end
 end
 
 # Define ActiveRecord classes
+class BlogPost < ActiveRecord::Base
+  validates_presence_of :title
+end
+
 class User < ActiveRecord::Base
 end
 
 # SampleModel configuration
+SampleModels.configure BlogPost do |bp|
+  bp.title ''
+end
+
 SampleModels.configure User do |u|
   u.creation_note { "Started at #{ Time.now.to_s }" }
+  u.irc_nick      nil
   u.homepage      'http://www.test.com/'
 end
 
 # Actual specs start here ...
+describe 'BlogPost.default_sample' do
+  it "should raise an error since it won't validate" do
+    BlogPost.destroy_all
+    lambda { BlogPost.default_sample }.should raise_error(
+      RuntimeError, /Problem creating BlogPost sample/
+    )
+  end
+end
+
 describe "User.custom_sample" do
   it 'should allow overrides of all fields' do
     user = User.custom_sample(
@@ -52,6 +74,10 @@ end
 describe "User.default_sample" do
   before :all do
     @user = User.default_sample
+  end
+  
+  it 'should allow a nil default value' do
+    @user.irc_nick.should be_nil
   end
   
   it "should set text fields by default starting with 'test '" do

@@ -20,9 +20,10 @@ module SampleModels
   
     def method_missing( meth, *args )
       if @domain_class.column_names.include?( meth.to_s )
-        default = args.first
-        unless default
-          default = Proc.new do; yield; end
+        default = if args.size == 1
+          args.first
+        else
+          Proc.new do; yield; end
         end
         SampleModels.configured_defaults[@domain_class][meth] = default
       else
@@ -32,13 +33,19 @@ module SampleModels
   end
   
   module ARClassMethods
-    def custom_sample( custom_attrs = {} )
-      default_attrs = default_sample_attrs
-      sample = create default_attrs.merge( custom_attrs )
+    def create_sample( attrs )
+      sample = create attrs
       unless sample.id
-        raise "Problem creating #{ self.name }: #{ sample.errors.inspect }"
+        raise(
+          "Problem creating #{ self.name } sample: #{ sample.errors.inspect }"
+        )
       end
       sample
+    end
+    
+    def custom_sample( custom_attrs = {} )
+      default_attrs = default_sample_attrs
+      create_sample default_attrs.merge( custom_attrs )
     end
     
     def default_sample
@@ -46,10 +53,14 @@ module SampleModels
         begin
           ds.reload
         rescue ActiveRecord::RecordNotFound
-          SampleModels.default_samples[self] = create( default_sample_attrs )
+          SampleModels.default_samples[self] = create_sample(
+            default_sample_attrs
+          )
         end
       else
-        SampleModels.default_samples[self] = create( default_sample_attrs )
+        SampleModels.default_samples[self] = create_sample(
+          default_sample_attrs
+        )
       end
       SampleModels.default_samples[self]
     end
@@ -58,7 +69,8 @@ module SampleModels
       default_atts = {}
       columns_hash.each do |name, column|
         default_att_value = nil
-        if cd = SampleModels.configured_defaults[self][name.to_sym]
+        if SampleModels.configured_defaults[self].key? name.to_sym
+          cd = SampleModels.configured_defaults[self][name.to_sym]
           cd = cd.call if cd.is_a?( Proc )
           default_att_value = cd
         else
