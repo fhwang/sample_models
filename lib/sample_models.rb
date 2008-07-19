@@ -14,6 +14,8 @@ module SampleModels
     self.configured_instances[model_class] = Proc.new { block.call }
   end
   
+  protected
+  
   def self.included( mod )
     mod.extend ARClassMethods
     super
@@ -39,29 +41,9 @@ module SampleModels
   end
   
   module ARClassMethods
-    def create_sample( attrs )
-      sample = create attrs
-      unless sample.id
-        raise(
-          "Problem creating #{ self.name } sample: #{ sample.errors.inspect }"
-        )
-      end
-      sample
-    end
-    
     def custom_sample( custom_attrs = {} )
       default_attrs = default_sample_attrs
       create_sample default_attrs.merge( custom_attrs )
-    end
-    
-    def set_default_sample
-      if proc = SampleModels.configured_instances[self]
-        SampleModels.default_samples[self] = proc.call
-      else
-        SampleModels.default_samples[self] = create_sample(
-          default_sample_attrs
-        )
-      end
     end
     
     def default_sample
@@ -75,6 +57,32 @@ module SampleModels
         set_default_sample
       end
       SampleModels.default_samples[self]
+    end
+    
+    def without_default_sample
+      ds = SampleModels.default_samples[self]
+      ds.destroy if ds
+      yield
+      ds.clone.save if ds
+    end
+    
+    protected
+    
+    def belongs_to_assoc_for( column )
+      belongs_to_assocs = reflect_on_all_associations.select { |assoc|
+        assoc.macro == :belongs_to
+      }
+      belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
+    end
+    
+    def create_sample( attrs )
+      sample = create attrs
+      unless sample.id
+        raise(
+          "Problem creating #{ self.name } sample: #{ sample.errors.inspect }"
+        )
+      end
+      sample
     end
     
     def default_sample_attrs
@@ -93,6 +101,16 @@ module SampleModels
       default_atts
     end
     
+    def set_default_sample
+      if proc = SampleModels.configured_instances[self]
+        SampleModels.default_samples[self] = proc.call
+      else
+        SampleModels.default_samples[self] = create_sample(
+          default_sample_attrs
+        )
+      end
+    end
+    
     def unconfigured_default_for( column )
       case column.type
         when :binary, :string, :text
@@ -104,27 +122,18 @@ module SampleModels
         when :datetime
           Time.now.utc
         when :integer
-          belongs_to_assocs = reflect_on_all_associations.select { |assoc|
-            assoc.macro == :belongs_to
-          }
-          assoc = belongs_to_assocs.detect { |a|
-            a.primary_key_name == column.name
-          }
-          if assoc
-            Module.const_get( assoc.class_name ).default_sample
-          else
-            1
-          end
+          unconfigured_default_for_integer( column )
         else
           raise "No default value for type #{ column.type.inspect }"
       end
     end
     
-    def without_default_sample
-      ds = SampleModels.default_samples[self]
-      ds.destroy if ds
-      yield
-      ds.clone.save if ds
+    def unconfigured_default_for_integer( column )
+      if assoc = belongs_to_assoc_for( column )
+        Module.const_get( assoc.class_name ).default_sample
+      else
+        1
+      end
     end
   end
 end
