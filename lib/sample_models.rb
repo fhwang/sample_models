@@ -1,11 +1,17 @@
 module SampleModels
   mattr_accessor :configured_defaults
   self.configured_defaults = Hash.new { |h,k| h[k] = {} }
+  mattr_accessor :configured_instances
+  self.configured_instances = {}
   mattr_accessor :default_samples
   self.default_samples = {}
 
-  def self.configure( domain_class )
-    yield ConfigureRecipient.new( domain_class )
+  def self.configure( model_class )
+    yield ConfigureRecipient.new( model_class )
+  end
+    
+  def self.default_instance( model_class, &block )
+    self.configured_instances[model_class] = Proc.new { block.call }
   end
   
   def self.included( mod )
@@ -14,18 +20,18 @@ module SampleModels
   end
   
   class ConfigureRecipient
-    def initialize( domain_class )
-      @domain_class = domain_class
+    def initialize( model_class )
+      @model_class = model_class
     end
   
     def method_missing( meth, *args )
-      if @domain_class.column_names.include?( meth.to_s )
+      if @model_class.column_names.include?( meth.to_s )
         default = if args.size == 1
           args.first
         else
           Proc.new do; yield; end
         end
-        SampleModels.configured_defaults[@domain_class][meth] = default
+        SampleModels.configured_defaults[@model_class][meth] = default
       else
         super
       end
@@ -48,19 +54,25 @@ module SampleModels
       create_sample default_attrs.merge( custom_attrs )
     end
     
+    def set_default_sample
+      if proc = SampleModels.configured_instances[self]
+        SampleModels.default_samples[self] = proc.call
+      else
+        SampleModels.default_samples[self] = create_sample(
+          default_sample_attrs
+        )
+      end
+    end
+    
     def default_sample
       if ds = SampleModels.default_samples[self]
         begin
           ds.reload
         rescue ActiveRecord::RecordNotFound
-          SampleModels.default_samples[self] = create_sample(
-            default_sample_attrs
-          )
+          set_default_sample
         end
       else
-        SampleModels.default_samples[self] = create_sample(
-          default_sample_attrs
-        )
+        set_default_sample
       end
       SampleModels.default_samples[self]
     end

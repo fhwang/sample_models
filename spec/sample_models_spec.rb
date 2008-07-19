@@ -19,6 +19,11 @@ silence_stream(STDOUT) do
       blog_post.integer 'user_id'
       blog_post.string  'title'
     end
+    
+    create_table 'comments', :force => true do |comment|
+      comment.integer 'blog_post_id', 'user_id'
+      comment.text    'comment'
+    end
 
     create_table 'users', :force => true do |user|
       user.date   'birthday'
@@ -37,12 +42,24 @@ class BlogPost < ActiveRecord::Base
   belongs_to :user
 end
 
+class Comment < ActiveRecord::Base
+  belongs_to :blog_post
+  belongs_to :user
+end
+
 class User < ActiveRecord::Base
 end
 
 # SampleModel configuration
 SampleModels.configure BadSample do |b|
   b.title ''
+end
+
+SampleModels.default_instance Comment do
+  Comment.create(
+    :blog_post => BlogPost.default_sample, :comment => 'foobar',
+    :user => User.default_sample
+  )
 end
 
 SampleModels.configure User do |u|
@@ -83,6 +100,13 @@ describe 'BlogPost.custom_sample' do
       blog_post = BlogPost.custom_sample :user_id => user.id
       blog_post.user.should_not == User.default_sample
     end
+  end
+end
+
+describe 'Comment.default_sample' do
+  it 'should take the instance from the SampleModels.default_instance block' do
+    comment1 = Comment.default_sample
+    comment1.comment.should == 'foobar'
   end
 end
 
