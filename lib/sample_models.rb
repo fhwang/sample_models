@@ -121,6 +121,8 @@ module SampleModels
           Date.today
         when :datetime
           Time.now.utc
+        when :float
+          1.0
         when :integer
           unconfigured_default_for_integer( column )
         else

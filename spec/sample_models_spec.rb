@@ -27,6 +27,7 @@ silence_stream(STDOUT) do
 
     create_table 'users', :force => true do |user|
       user.date   'birthday'
+      user.float  'avg_rating'
       user.string 'login', 'password', 'homepage', 'creation_note'
       user.text   'bio', 'irc_nick'
     end
@@ -100,22 +101,26 @@ describe "Model" do
     it "should set a field to a configured default" do
       @user.homepage.should == 'http://www.test.com/'
     end
+    
+    it 'should set floats to 1.0' do
+      @user.avg_rating.should == 1.0
+    end
 
     it "should set text fields by default starting with 'test '" do
       @user = User.default_sample
       @user.password.should == 'Test password'
       @user.bio.should == 'Test bio'
     end
+  end
 
-    describe "without_default_sample" do
-      it 'should provide a context without the default sample' do
-        User.default_sample
-        initial_user_count = User.count
-        User.without_default_sample do
-          User.count.should ==( initial_user_count - 1 )
-        end
-        User.count.should == initial_user_count
+  describe "without_default_sample" do
+    it 'should provide a context without the default sample' do
+      User.default_sample
+      initial_user_count = User.count
+      User.without_default_sample do
+        User.count.should ==( initial_user_count - 1 )
       end
+      User.count.should == initial_user_count
     end
   end
 end
