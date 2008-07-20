@@ -69,57 +69,78 @@ SampleModels.configure User do |u|
 end
 
 # Actual specs start here ...
-describe 'BadSample.default_sample' do
-  it "should raise an error since it won't validate" do
-    BadSample.destroy_all
-    lambda { BadSample.default_sample }.should raise_error(
-      RuntimeError, /Problem creating BadSample sample/
-    )
-  end
-end
-
-describe 'BlogPost.default_sample' do
-  it 'should include associated models' do
-    blog_post = BlogPost.default_sample
-    blog_post.user.should == User.default_sample
-  end
-end
-
-describe 'BlogPost.custom_sample' do
-  describe 'with a custom user' do
-    it 'should set the custom user' do
-      user = User.custom_sample
-      blog_post = BlogPost.custom_sample :user => user
-      blog_post.user.should_not == User.default_sample
-    end
-  end
-  
-  describe 'with a custom user_id' do
-    it 'should set the custom user' do
-      user = User.custom_sample
-      blog_post = BlogPost.custom_sample :user_id => user.id
-      blog_post.user.should_not == User.default_sample
-    end
-  end
-end
-
-describe 'Comment.default_sample' do
-  it 'should take the instance from the SampleModels.default_instance block' do
-    comment1 = Comment.default_sample
-    comment1.comment.should == 'foobar'
-  end
-end
-
-describe "User.custom_sample" do
-  it 'should allow overrides of all fields' do
+describe "Model" do
+  it 'should allow overrides of all fields in custom_sample' do
     user = User.custom_sample(
       :homepage => 'http://mysite.com/', :password => 'myownpassword'
     )
     user.homepage.should == 'http://mysite.com/'
     user.password.should == 'myownpassword'
   end
+
+  describe 'default_sample' do
+    before :all do
+      @user = User.default_sample
+    end
+    
+    it 'should re-create the instance if it was deleted in the database' do
+      User.destroy_all
+      User.count.should == 0
+      user_prime = User.default_sample
+      User.count.should == 1
+      @user.id.should_not == user_prime.id
+    end
   
-  it 'should defer evaluation of field defaults if a block is passed in' do
+    it "should return the same instance after multiple calls" do
+      user = User.default_sample
+      user_prime = User.default_sample
+      user.object_id.should == user_prime.object_id
+    end
+    
+    it "should set a field to a configured default" do
+      @user.homepage.should == 'http://www.test.com/'
+    end
+
+    it "should set text fields by default starting with 'test '" do
+      @user = User.default_sample
+      @user.password.should == 'Test password'
+      @user.bio.should == 'Test bio'
+    end
+
+    describe "without_default_sample" do
+      it 'should provide a context without the default sample' do
+        User.default_sample
+        initial_user_count = User.count
+        User.without_default_sample do
+          User.count.should ==( initial_user_count - 1 )
+        end
+        User.count.should == initial_user_count
+      end
+    end
+  end
+end
+
+describe 'Model with a belongs_to association' do
+  it 'should be associated with the belongs_to recipient by default' do
+    blog_post = BlogPost.default_sample
+    blog_post.user.should == User.default_sample
+  end
+  
+  it 'should set a custom value by the association name' do
+    user = User.custom_sample
+    blog_post = BlogPost.custom_sample :user => user
+    blog_post.user.should_not == User.default_sample
+  end
+  
+  it 'should set a custom value by the column name' do
+    user = User.custom_sample
+    blog_post = BlogPost.custom_sample :user_id => user.id
+    blog_post.user.should_not == User.default_sample
+  end
+end
+  
+describe 'Model with a block for a default field' do
+  it 'should evaluate the block every time custom_sample is called' do
     user1 = User.custom_sample
     user1.creation_note.should match( /^Started at/ )
     sleep 1
@@ -129,49 +150,26 @@ describe "User.custom_sample" do
   end
 end
 
-describe "User.default_sample" do
-  before :all do
+describe 'Model with a default_instance' do
+  it 'should determine the instance by running the default_instance block' do
+    comment1 = Comment.default_sample
+    comment1.comment.should == 'foobar'
+  end
+end
+
+describe 'Model with an invalid default field' do
+  it "should raise an error when default_sample is called" do
+    BadSample.destroy_all
+    lambda { BadSample.default_sample }.should raise_error(
+      RuntimeError, /Problem creating BadSample sample/
+    )
+  end
+end
+
+describe 'Model with a nil default value' do
+  it 'should set that value in default_sample' do
     @user = User.default_sample
-  end
-  
-  it 'should allow a nil default value' do
     @user.irc_nick.should be_nil
-  end
-  
-  it "should set text fields by default starting with 'test '" do
-    @user.password.should == 'Test password'
-    @user.bio.should == 'Test bio'
-  end
-  
-  it "should set homepage to a configured default" do
-    @user.homepage.should == 'http://www.test.com/'
-  end
-  
-  it "should return the same instance after multiple calls" do
-    user_prime = User.default_sample
-    @user.object_id.should == user_prime.object_id
-  end
-end
-
-describe 'User.destroy_all' do
-  it 'should clear out the cached instance' do
-    default_user1 = User.default_sample
-    User.destroy_all
-    User.count.should == 0
-    default_user2 = User.default_sample
-    User.count.should == 1
-    default_user1.id.should_not == default_user2.id
-  end
-end
-
-describe "User.without_default_sample" do
-  it 'should setup a context without the default sample' do
-    User.default_sample
-    initial_user_count = User.count
-    User.without_default_sample do
-      User.count.should ==( initial_user_count - 1 )
-    end
-    User.count.should == initial_user_count
   end
 end
 

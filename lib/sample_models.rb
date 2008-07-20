@@ -130,7 +130,7 @@ module SampleModels
     
     def unconfigured_default_for_integer( column )
       if assoc = belongs_to_assoc_for( column )
-        Module.const_get( assoc.class_name ).default_sample
+        Module.const_get( assoc.class_name ).default_sample.id
       else
         1
       end
