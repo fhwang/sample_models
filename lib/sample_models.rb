@@ -6,7 +6,13 @@ module SampleModels
   mattr_accessor :default_samples
   self.default_samples = {}
   mattr_reader   :samplers
-  @@samplers = Hash.new { |h,k| h[k] = Sampler.new(k) }
+  @@samplers = Hash.new { |h, model_class|
+    h[model_class] = Sampler.new(
+      model_class,
+      configured_defaults[model_class],
+      configured_instances[model_class]
+    )
+  }
 
   def self.configure( model_class )
     yield ConfigureRecipient.new( model_class )
@@ -43,8 +49,11 @@ module SampleModels
   end
   
   class Sampler
-    def initialize(model_class)
-      @model_class = model_class
+    def initialize(
+          model_class, configured_default_attrs, default_instance_proc
+        )
+      @model_class, @configured_default_attrs, @default_instance_proc =
+          model_class, configured_default_attrs, default_instance_proc
     end
     
     def belongs_to_assoc_for( column )
@@ -74,8 +83,8 @@ module SampleModels
       default_atts = {}
       @model_class.columns_hash.each do |name, column|
         default_att_value = nil
-        if SampleModels.configured_defaults[@model_class].key? name.to_sym
-          cd = SampleModels.configured_defaults[@model_class][name.to_sym]
+        if @configured_default_attrs.key? name.to_sym
+          cd = @configured_default_attrs[name.to_sym]
           cd = cd.call if cd.is_a?( Proc )
           default_att_value = cd
         else
@@ -87,8 +96,8 @@ module SampleModels
     end
     
     def set_default
-      if proc = SampleModels.configured_instances[@model_class]
-        @default = proc.call
+      if proc = @default_instance_proc
+        @default = @default_instance_proc.call
       else
         @default = @model_class.create! default_attrs
       end
