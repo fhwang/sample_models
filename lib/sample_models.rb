@@ -24,6 +24,11 @@ module SampleModels
     self.configured_instances[model_class] = Proc.new { block.call }
   end
   
+  def self.random_word(length = 20)
+    letters = 'abcdefghijklmnopqrstuvwxyz'.split //
+    (1..length).to_a.map { letters[rand(letters.size)] }.join( '' )
+  end
+  
   protected
   
   def self.included( mod )
@@ -118,6 +123,13 @@ module SampleModels
         }
         if inclusion
           inclusion.last[:in].first
+        else
+          as_email = @validations[column.name.to_sym].detect { |ary|
+            ary.first == :validates_email_format_of
+          }
+          if as_email
+            "#{SampleModels.random_word}@#{SampleModels.random_word}.com"
+          end
         end
       end
       udf || case column.type
@@ -165,13 +177,18 @@ module ActiveRecord
   
   module Validations
     module ClassMethods
-      define_method "validates_inclusion_of_with_sample_models".to_sym do |*args|
-        send "validates_inclusion_of_without_sample_models".to_sym, *args
-        SampleModels.samplers[self].record_validation(
-          :validates_inclusion_of, *args
-        )
+      [:validates_email_format_of,
+       :validates_inclusion_of].each do |validation|
+        if method_defined?(validation)
+          define_method "#{validation}_with_sample_models".to_sym do |*args|
+            send "#{validation}_without_sample_models".to_sym, *args
+            SampleModels.samplers[self].record_validation(
+              validation, *args
+            )
+          end
+          alias_method_chain validation, :sample_models
+        end
       end
-      alias_method_chain "validates_inclusion_of".to_sym, :sample_models
     end
   end
 end

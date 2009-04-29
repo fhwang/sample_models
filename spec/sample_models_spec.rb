@@ -1,6 +1,9 @@
 require 'rubygems'
 require 'active_record'
 RAILS_ENV = 'test'
+require 'active_record/base'
+require File.dirname(__FILE__) +
+        '/vendor/validates_email_format_of/lib/validates_email_format_of'
 require File.dirname(__FILE__) + '/../lib/sample_models'
 
 # Configure ActiveRecord
@@ -28,7 +31,8 @@ silence_stream(STDOUT) do
     create_table 'users', :force => true do |user|
       user.date   'birthday'
       user.float  'avg_rating'
-      user.string 'login', 'password', 'homepage', 'creation_note', 'gender'
+      user.string 'login', 'password', 'homepage', 'creation_note', 'gender',
+                  'email'
       user.text   'bio', 'irc_nick'
     end
   end
@@ -49,7 +53,8 @@ class Comment < ActiveRecord::Base
 end
 
 class User < ActiveRecord::Base
-  validates_inclusion_of :gender, :in => %w( m f )
+  validates_email_format_of :email
+  validates_inclusion_of    :gender, :in => %w( m f )
 end
 
 # SampleModel configuration
@@ -115,6 +120,10 @@ describe "Model" do
     
     it 'should pick the first value given in a validates_inclusion_if' do
       @user.gender.should == 'm'
+    end
+    
+    it 'should set emails based on a validation' do
+      @user.email.should match(/^.*@.*\..*/)
     end
   end
 end
