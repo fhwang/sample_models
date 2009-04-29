@@ -112,17 +112,6 @@ describe "Model" do
       @user.bio.should == 'Test bio'
     end
   end
-
-  describe "without_default_sample" do
-    it 'should provide a context without the default sample' do
-      User.default_sample
-      initial_user_count = User.count
-      User.without_default_sample do
-        User.count.should ==( initial_user_count - 1 )
-      end
-      User.count.should == initial_user_count
-    end
-  end
 end
 
 describe 'Model with a belongs_to association' do
@@ -166,7 +155,7 @@ describe 'Model with an invalid default field' do
   it "should raise an error when default_sample is called" do
     BadSample.destroy_all
     lambda { BadSample.default_sample }.should raise_error(
-      RuntimeError, /Problem creating BadSample sample/
+      ActiveRecord::RecordInvalid, /Title can't be blank/
     )
   end
 end
