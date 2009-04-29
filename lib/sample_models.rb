@@ -116,8 +116,8 @@ module SampleModels
       end
     end
     
-    def unconfigured_default_for( column )
-      udf = unless @validations[column.name.to_sym].empty?
+    def unconfigured_default_based_on_validations(column)
+      unless @validations[column.name.to_sym].empty?
         inclusion = @validations[column.name.to_sym].detect { |ary|
           ary.first == :validates_inclusion_of
         }
@@ -132,6 +132,10 @@ module SampleModels
           end
         end
       end
+    end
+    
+    def unconfigured_default_for( column )
+      udf = unconfigured_default_based_on_validations column
       udf || case column.type
         when :binary, :string, :text
           "Test #{ column.name }"
