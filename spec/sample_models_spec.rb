@@ -169,7 +169,8 @@ describe 'Model with an invalid default field' do
   it "should raise an error when default_sample is called" do
     BadSample.destroy_all
     lambda { BadSample.default_sample }.should raise_error(
-      ActiveRecord::RecordInvalid, /Title can't be blank/
+      RuntimeError,
+      /BadSample validation failed: Title can't be blank/
     )
   end
 end

@@ -75,8 +75,17 @@ module SampleModels
       belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
     end
     
+    def create!(atts)
+      begin
+        @model_class.create! atts
+      rescue ActiveRecord::RecordInvalid
+        $!.to_s =~ /Validation failed: (.*)/
+        raise "#{@model_class.name} validation failed: #{$1}"
+      end
+    end
+    
     def custom(custom_attrs)
-      @model_class.create! default_attrs.merge( custom_attrs )
+      create! default_attrs.merge( custom_attrs )
     end
     
     def default
@@ -112,7 +121,7 @@ module SampleModels
       if proc = @default_instance_proc
         @default = @default_instance_proc.call
       else
-        @default = @model_class.create! default_attrs
+        @default = create! default_attrs
       end
     end
     
