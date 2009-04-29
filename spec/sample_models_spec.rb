@@ -28,7 +28,7 @@ silence_stream(STDOUT) do
     create_table 'users', :force => true do |user|
       user.date   'birthday'
       user.float  'avg_rating'
-      user.string 'login', 'password', 'homepage', 'creation_note'
+      user.string 'login', 'password', 'homepage', 'creation_note', 'gender'
       user.text   'bio', 'irc_nick'
     end
   end
@@ -49,6 +49,7 @@ class Comment < ActiveRecord::Base
 end
 
 class User < ActiveRecord::Base
+  validates_inclusion_of :gender, :in => %w( m f )
 end
 
 # SampleModel configuration
@@ -110,6 +111,10 @@ describe "Model" do
       @user = User.default_sample
       @user.password.should == 'Test password'
       @user.bio.should == 'Test bio'
+    end
+    
+    it 'should pick the first value given in a validates_inclusion_if' do
+      @user.gender.should == 'm'
     end
   end
 end

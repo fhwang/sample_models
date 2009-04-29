@@ -1,3 +1,5 @@
+if RAILS_ENV == 'test' # no reason to run this code outside of test mode
+
 module SampleModels
   mattr_accessor :configured_defaults
   self.configured_defaults = Hash.new { |h,k| h[k] = {} }
@@ -54,6 +56,12 @@ module SampleModels
         )
       @model_class, @configured_default_attrs, @default_instance_proc =
           model_class, configured_default_attrs, default_instance_proc
+      @validations = Hash.new { |h, field| h[field] = [] }
+    end
+    
+    def record_validation(*args)
+      field = args[1]
+      @validations[field] << args
     end
     
     def belongs_to_assoc_for( column )
@@ -104,7 +112,15 @@ module SampleModels
     end
     
     def unconfigured_default_for( column )
-      case column.type
+      udf = unless @validations[column.name.to_sym].empty?
+        inclusion = @validations[column.name.to_sym].detect { |ary|
+          ary.first == :validates_inclusion_of
+        }
+        if inclusion
+          inclusion.last[:in].first
+        end
+      end
+      udf || case column.type
         when :binary, :string, :text
           "Test #{ column.name }"
         when :boolean
@@ -142,8 +158,22 @@ module SampleModels
   end
 end
 
-if RAILS_ENV == 'test'
-  class ActiveRecord::Base
+module ActiveRecord
+  class Base
     include SampleModels
   end
+  
+  module Validations
+    module ClassMethods
+      define_method "validates_inclusion_of_with_sample_models".to_sym do |*args|
+        send "validates_inclusion_of_without_sample_models".to_sym, *args
+        SampleModels.samplers[self].record_validation(
+          :validates_inclusion_of, *args
+        )
+      end
+      alias_method_chain "validates_inclusion_of".to_sym, :sample_models
+    end
+  end
+end
+
 end
