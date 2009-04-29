@@ -21,6 +21,7 @@ silence_stream(STDOUT) do
     create_table 'blog_posts', :force => true do |blog_post|
       blog_post.integer 'user_id'
       blog_post.string  'title'
+      blog_post.integer 'merged_into_id'
     end
     
     create_table 'comments', :force => true do |comment|
@@ -44,6 +45,8 @@ class BadSample < ActiveRecord::Base
 end
 
 class BlogPost < ActiveRecord::Base
+  belongs_to :merged_into,
+             :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
 end
 
@@ -144,6 +147,16 @@ describe 'Model with a belongs_to association' do
     user = User.custom_sample
     blog_post = BlogPost.custom_sample :user_id => user.id
     blog_post.user.should_not == User.default_sample
+  end
+end
+
+describe 'Model with a belongs_to association of the same class' do
+  before :all do
+    @blog_post = BlogPost.default_sample
+  end
+  
+  it 'should be nil by default' do
+    @blog_post.merged_into.should be_nil
   end
 end
   
