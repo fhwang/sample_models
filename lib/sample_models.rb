@@ -136,7 +136,8 @@ module SampleModels
     def unconfigured_default_for_integer( column )
       if assoc = belongs_to_assoc_for( column )
         unless assoc.class_name == @model_class.name
-          Module.const_get(assoc.class_name).default_sample.id
+          assoc_class = Module.const_get assoc.class_name
+          SampleModels::DefaultCreation.new(assoc_class).run.id
         end
       else
         1
