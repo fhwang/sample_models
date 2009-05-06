@@ -58,13 +58,13 @@ module SampleModels
   class Creation
     def initialize(model_class)
       @model_class = model_class
-      @default_simple_attrs = {}
-      @default_assoc_creations = {}
+      @default_attrs = {}
+      @deferred_assoc_creations = {}
       @model_class.columns_hash.each do |name, column|
         if assoc = belongs_to_assoc_for( column )
           unless assoc.class_name == @model_class.name
             assoc_class = Module.const_get assoc.class_name
-            @default_assoc_creations[name.to_sym] =
+            @deferred_assoc_creations[name.to_sym] =
                 SampleModels::DefaultCreation.new(assoc_class)
           end
         else
@@ -76,7 +76,7 @@ module SampleModels
           else
             default_att_value = unconfigured_default_for column
           end
-          @default_simple_attrs[name.to_sym] = default_att_value
+          @default_attrs[name.to_sym] = default_att_value
         end
       end
     end
@@ -154,7 +154,7 @@ module SampleModels
     def initialize(model_class, custom_attrs = {})
       super model_class
       @custom_attrs = custom_attrs
-      @attributes = @default_simple_attrs.merge @custom_attrs
+      @attributes = @default_attrs.merge @custom_attrs
     end
     
     def run
@@ -162,7 +162,7 @@ module SampleModels
     end
     
     def each_updateable_association
-      @default_assoc_creations.each do |name, creation|
+      @deferred_assoc_creations.each do |name, creation|
         yield name, creation unless @custom_attrs.keys.include?(name)
       end
     end
@@ -171,11 +171,11 @@ module SampleModels
   class DefaultCreation < Creation
     def initialize(model_class)
       super model_class
-      @attributes = @default_simple_attrs
+      @attributes = @default_attrs
     end
     
     def each_updateable_association
-      @default_assoc_creations.each do |name, creation|
+      @deferred_assoc_creations.each do |name, creation|
         yield name, creation
       end
     end
