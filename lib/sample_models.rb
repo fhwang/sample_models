@@ -55,18 +55,9 @@ module SampleModels
     end
   end
   
-  class Sampler
-    def initialize(
-          model_class, configured_default_attrs, default_instance_proc
-        )
-      @model_class, @configured_default_attrs, @default_instance_proc =
-          model_class, configured_default_attrs, default_instance_proc
-      @validations = Hash.new { |h, field| h[field] = [] }
-    end
-    
-    def record_validation(*args)
-      field = args[1]
-      @validations[field] << args
+  class Creation
+    def initialize(model_class)
+      @model_class = model_class
     end
     
     def belongs_to_assoc_for( column )
@@ -84,29 +75,12 @@ module SampleModels
       end
     end
     
-    def custom(custom_attrs)
-      create! default_attrs.merge( custom_attrs )
-    end
-    
-    def default
-      if ds = @default
-        begin
-          ds.reload
-        rescue ActiveRecord::RecordNotFound
-          set_default
-        end
-      else
-        set_default
-      end
-      @default
-    end
-    
     def default_attrs
       default_atts = {}
       @model_class.columns_hash.each do |name, column|
         default_att_value = nil
-        if @configured_default_attrs.key? name.to_sym
-          cd = @configured_default_attrs[name.to_sym]
+        if sampler.configured_default_attrs.key? name.to_sym
+          cd = sampler.configured_default_attrs[name.to_sym]
           cd = cd.call if cd.is_a?( Proc )
           default_att_value = cd
         else
@@ -117,23 +91,19 @@ module SampleModels
       default_atts
     end
     
-    def set_default
-      if proc = @default_instance_proc
-        @default = @default_instance_proc.call
-      else
-        @default = create! default_attrs
-      end
+    def sampler
+      SampleModels.samplers[@model_class]
     end
     
     def unconfigured_default_based_on_validations(column)
-      unless @validations[column.name.to_sym].empty?
-        inclusion = @validations[column.name.to_sym].detect { |ary|
+      unless sampler.validations[column.name.to_sym].empty?
+        inclusion = sampler.validations[column.name.to_sym].detect { |ary|
           ary.first == :validates_inclusion_of
         }
         if inclusion
           inclusion.last[:in].first
         else
-          as_email = @validations[column.name.to_sym].detect { |ary|
+          as_email = sampler.validations[column.name.to_sym].detect { |ary|
             ary.first == :validates_email_format_of
           }
           if as_email
@@ -174,13 +144,66 @@ module SampleModels
     end
   end
   
+  class CustomCreation < Creation
+    def initialize(model_class, custom_attrs = {})
+      super model_class
+      @custom_attrs = custom_attrs
+    end
+    
+    def run
+      create! default_attrs.merge( @custom_attrs )
+    end
+  end
+  
+  class DefaultCreation < Creation
+    def run
+      if ds = sampler.default_instance
+        begin
+          ds.reload
+        rescue ActiveRecord::RecordNotFound
+          set_default
+        end
+      else
+        set_default
+      end
+      sampler.default_instance
+    end
+    
+    def set_default
+      if proc = sampler.default_instance_proc
+        default_instance = proc.call
+      else
+        default_instance = create! default_attrs
+      end
+      sampler.default_instance = default_instance
+    end
+  end
+  
+  class Sampler
+    attr_accessor :default_instance
+    attr_reader :configured_default_attrs, :default_instance_proc, :validations
+    
+    def initialize(
+          model_class, configured_default_attrs, default_instance_proc
+        )
+      @model_class, @configured_default_attrs, @default_instance_proc =
+          model_class, configured_default_attrs, default_instance_proc
+      @validations = Hash.new { |h, field| h[field] = [] }
+    end
+    
+    def record_validation(*args)
+      field = args[1]
+      @validations[field] << args
+    end
+  end
+  
   module ARClassMethods
     def custom_sample( custom_attrs = {} )
-      SampleModels.samplers[self].custom custom_attrs
+      SampleModels::CustomCreation.new(self, custom_attrs).run
     end
     
     def default_sample
-      SampleModels.samplers[self].default
+      SampleModels::DefaultCreation.new(self).run
     end
   end
 end
