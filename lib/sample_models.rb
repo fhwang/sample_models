@@ -58,6 +58,27 @@ module SampleModels
   class Creation
     def initialize(model_class)
       @model_class = model_class
+      @default_simple_attrs = {}
+      @default_assoc_creations = {}
+      @model_class.columns_hash.each do |name, column|
+        if assoc = belongs_to_assoc_for( column )
+          unless assoc.class_name == @model_class.name
+            assoc_class = Module.const_get assoc.class_name
+            @default_assoc_creations[name.to_sym] =
+                SampleModels::DefaultCreation.new(assoc_class)
+          end
+        else
+          default_att_value = nil
+          if sampler.configured_default_attrs.key? name.to_sym
+            cd = sampler.configured_default_attrs[name.to_sym]
+            cd = cd.call if cd.is_a?( Proc )
+            default_att_value = cd
+          else
+            default_att_value = unconfigured_default_for column
+          end
+          @default_simple_attrs[name.to_sym] = default_att_value
+        end
+      end
     end
     
     def belongs_to_assoc_for( column )
@@ -66,29 +87,15 @@ module SampleModels
       belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
     end
     
-    def create!(atts)
-      begin
-        @model_class.create! atts
+    def create!
+      @instance = begin
+        @model_class.create! @attributes
       rescue ActiveRecord::RecordInvalid
         $!.to_s =~ /Validation failed: (.*)/
         raise "#{@model_class.name} validation failed: #{$1}"
       end
-    end
-    
-    def default_attrs
-      default_atts = {}
-      @model_class.columns_hash.each do |name, column|
-        default_att_value = nil
-        if sampler.configured_default_attrs.key? name.to_sym
-          cd = sampler.configured_default_attrs[name.to_sym]
-          cd = cd.call if cd.is_a?( Proc )
-          default_att_value = cd
-        else
-          default_att_value = unconfigured_default_for column
-        end
-        default_atts[name.to_sym] = default_att_value
-      end
-      default_atts
+      update_associations
+      @instance
     end
     
     def sampler
@@ -127,21 +134,19 @@ module SampleModels
         when :float
           1.0
         when :integer
-          unconfigured_default_for_integer( column )
+          1
         else
           raise "No default value for type #{ column.type.inspect }"
       end
     end
     
-    def unconfigured_default_for_integer( column )
-      if assoc = belongs_to_assoc_for( column )
-        unless assoc.class_name == @model_class.name
-          assoc_class = Module.const_get assoc.class_name
-          SampleModels::DefaultCreation.new(assoc_class).run.id
-        end
-      else
-        1
+    def update_associations
+      needs_save = false
+      each_updateable_association do |name, creation|
+        needs_save = true
+        @instance.send("#{name}=", creation.run.id)
       end
+      @instance.save if needs_save
     end
   end
   
@@ -149,14 +154,32 @@ module SampleModels
     def initialize(model_class, custom_attrs = {})
       super model_class
       @custom_attrs = custom_attrs
+      @attributes = @default_simple_attrs.merge @custom_attrs
     end
     
     def run
-      create! default_attrs.merge( @custom_attrs )
+      create!
+    end
+    
+    def each_updateable_association
+      @default_assoc_creations.each do |name, creation|
+        yield name, creation unless @custom_attrs.keys.include?(name)
+      end
     end
   end
   
   class DefaultCreation < Creation
+    def initialize(model_class)
+      super model_class
+      @attributes = @default_simple_attrs
+    end
+    
+    def each_updateable_association
+      @default_assoc_creations.each do |name, creation|
+        yield name, creation
+      end
+    end
+    
     def run
       if ds = sampler.default_instance
         begin
@@ -174,7 +197,7 @@ module SampleModels
       if proc = sampler.default_instance_proc
         default_instance = proc.call
       else
-        default_instance = create! default_attrs
+        default_instance = create!
       end
       sampler.default_instance = default_instance
     end
