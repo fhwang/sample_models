@@ -49,11 +49,16 @@ class BlogPost < ActiveRecord::Base
   belongs_to :merged_into,
              :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
+  
+  validates_presence_of :user_id
 end
 
 class Comment < ActiveRecord::Base
   belongs_to :blog_post
   belongs_to :user
+  
+  validates_presence_of :blog_post_id
+  validates_presence_of :user_id
 end
 
 class User < ActiveRecord::Base

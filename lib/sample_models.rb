@@ -3,16 +3,12 @@ if RAILS_ENV == 'test' # no reason to run this code outside of test mode
 module SampleModels
   mattr_accessor :configured_defaults
   self.configured_defaults = Hash.new { |h,k| h[k] = {} }
-  mattr_accessor :configured_instances
-  self.configured_instances = {}
   mattr_accessor :default_samples
   self.default_samples = {}
   mattr_reader   :samplers
   @@samplers = Hash.new { |h, model_class|
     h[model_class] = Sampler.new(
-      model_class,
-      configured_defaults[model_class],
-      configured_instances[model_class]
+      model_class, configured_defaults[model_class]
     )
   }
 
@@ -21,7 +17,7 @@ module SampleModels
   end
     
   def self.default_instance( model_class, &block )
-    self.configured_instances[model_class] = Proc.new { block.call }
+    samplers[model_class].default_instance_proc = Proc.new { block.call }
   end
   
   def self.random_word(length = 20)
@@ -64,13 +60,18 @@ module SampleModels
       @default_attrs = {}
       @deferred_assoc_creations = {}
       model_class.columns_hash.each do |name, column|
+        deferred_assoc_creation = false
         if assoc = @sampler.belongs_to_assoc_for( column )
-          unless assoc.class_name == model_class.name
-            assoc_class = Module.const_get assoc.class_name
-            @deferred_assoc_creations[name.to_sym] =
-                SampleModels.samplers[assoc_class].default_creation
+          unless @sampler.model_validates_presence_of?(column.name)
+            unless assoc.class_name == model_class.name
+              assoc_class = Module.const_get assoc.class_name
+              @deferred_assoc_creations[name.to_sym] =
+                  SampleModels.samplers[assoc_class].default_creation
+            end
+            deferred_assoc_creation = true
           end
-        else
+        end
+        unless deferred_assoc_creation
           default_att_value = nil
           if @sampler.configured_default_attrs.key? name.to_sym
             cd = @sampler.configured_default_attrs[name.to_sym]
@@ -178,13 +179,11 @@ module SampleModels
   
   class Sampler
     attr_reader :configured_default_attrs, :model_class, :validations
-    attr_writer :default_instance
+    attr_writer :default_instance, :default_instance_proc
     
-    def initialize(
-          model_class, configured_default_attrs, default_instance_proc
-        )
-      @model_class, @configured_default_attrs, @default_instance_proc =
-          model_class, configured_default_attrs, default_instance_proc
+    def initialize(model_class, configured_default_attrs)
+      @model_class, @configured_default_attrs =
+          model_class, configured_default_attrs
       @validations = Hash.new { |h, field| h[field] = [] }
     end
     
@@ -229,6 +228,12 @@ module SampleModels
     def default_sample
       SampleModels.samplers.values.each(&:clear_default_creation)
       default_creation.run
+    end
+    
+    def model_validates_presence_of?(column_name)
+      validations[column_name.to_sym].any? { |args|
+        args.first == :validates_presence_of
+      }
     end
     
     def record_validation(*args)
@@ -294,7 +299,7 @@ module ActiveRecord
   module Validations
     module ClassMethods
       [:validates_email_format_of,
-       :validates_inclusion_of].each do |validation|
+       :validates_inclusion_of, :validates_presence_of].each do |validation|
         if method_defined?(validation)
           define_method "#{validation}_with_sample_models".to_sym do |*args|
             send "#{validation}_without_sample_models".to_sym, *args
