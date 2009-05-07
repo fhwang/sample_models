@@ -56,40 +56,28 @@ module SampleModels
   end
   
   class Creation
-    attr_reader :model_class
-    
-    def initialize(model_class)
-      @model_class = model_class
-    end
-    
-    def belongs_to_assoc_for( column )
-      belongs_to_associations.detect { |a| a.primary_key_name == column.name }
-    end
-    
-    def belongs_to_associations
-      @model_class.reflect_on_all_associations.select { |assoc|
-        assoc.macro == :belongs_to
-      }
+    def initialize(sampler)
+      @sampler = sampler
     end
     
     def build_attrs_and_assoc_creations
       @default_attrs = {}
       @deferred_assoc_creations = {}
-      @model_class.columns_hash.each do |name, column|
-        if assoc = belongs_to_assoc_for( column )
-          unless assoc.class_name == @model_class.name
+      model_class.columns_hash.each do |name, column|
+        if assoc = @sampler.belongs_to_assoc_for( column )
+          unless assoc.class_name == model_class.name
             assoc_class = Module.const_get assoc.class_name
             @deferred_assoc_creations[name.to_sym] =
                 SampleModels.samplers[assoc_class].default_creation
           end
         else
           default_att_value = nil
-          if sampler.configured_default_attrs.key? name.to_sym
-            cd = sampler.configured_default_attrs[name.to_sym]
+          if @sampler.configured_default_attrs.key? name.to_sym
+            cd = @sampler.configured_default_attrs[name.to_sym]
             cd = cd.call if cd.is_a?( Proc )
             default_att_value = cd
           else
-            default_att_value = unconfigured_default_for column
+            default_att_value = @sampler.unconfigured_default_for column
           end
           @default_attrs[name.to_sym] = default_att_value
         end
@@ -100,10 +88,10 @@ module SampleModels
       build_attrs_and_assoc_creations
       set_attributes
       @instance = begin
-        @model_class.create! @attributes
+        model_class.create! @attributes
       rescue ActiveRecord::RecordInvalid
         $!.to_s =~ /Validation failed: (.*)/
-        raise "#{@model_class.name} validation failed: #{$1}"
+        raise "#{model_class.name} validation failed: #{$1}"
       end
       update_associations
       @instance
@@ -114,46 +102,8 @@ module SampleModels
       @instance
     end
     
-    def sampler
-      SampleModels.samplers[@model_class]
-    end
-    
-    def unconfigured_default_based_on_validations(column)
-      unless sampler.validations[column.name.to_sym].empty?
-        inclusion = sampler.validations[column.name.to_sym].detect { |ary|
-          ary.first == :validates_inclusion_of
-        }
-        if inclusion
-          inclusion.last[:in].first
-        else
-          as_email = sampler.validations[column.name.to_sym].detect { |ary|
-            ary.first == :validates_email_format_of
-          }
-          if as_email
-            "#{SampleModels.random_word}@#{SampleModels.random_word}.com"
-          end
-        end
-      end
-    end
-    
-    def unconfigured_default_for( column )
-      udf = unconfigured_default_based_on_validations column
-      udf || case column.type
-        when :binary, :string, :text
-          "Test #{ column.name }"
-        when :boolean
-          true
-        when :date
-          Date.today
-        when :datetime
-          Time.now.utc
-        when :float
-          1.0
-        when :integer
-          1
-        else
-          raise "No default value for type #{ column.type.inspect }"
-      end
+    def model_class
+      @sampler.model_class
     end
     
     def update_associations
@@ -167,8 +117,8 @@ module SampleModels
   end
   
   class CustomCreation < Creation
-    def initialize(model_class, custom_attrs = {})
-      super model_class
+    def initialize(sampler, custom_attrs = {})
+      super sampler
       @custom_attrs = custom_attrs
     end
     
@@ -196,7 +146,7 @@ module SampleModels
     
     def run
       valid_instance_already_exists = false
-      if ds = sampler.default_instance
+      if ds = @sampler.default_instance
         begin
           ds.reload
           valid_instance_already_exists = true
@@ -205,9 +155,9 @@ module SampleModels
         end
       end
       if valid_instance_already_exists
-        belongs_to_associations.each do |assoc|
+        @sampler.belongs_to_associations.each do |assoc|
           recreated_associations = false
-          unless assoc.class_name == @model_class.name
+          unless assoc.class_name == model_class.name
             assoc_class = Module.const_get assoc.class_name
             unless assoc_class.find_by_id(ds.send(assoc.name))
               ds.send(
@@ -222,7 +172,7 @@ module SampleModels
       else
         set_default
       end
-      @instance = sampler.default_instance
+      @instance = @sampler.default_instance
     end
     
     def set_attributes
@@ -230,18 +180,19 @@ module SampleModels
     end
     
     def set_default
-      if proc = sampler.default_instance_proc
+      if proc = @sampler.default_instance_proc
         default_instance = proc.call
       else
         default_instance = create!
       end
-      sampler.default_instance = default_instance
+      @sampler.default_instance = default_instance
     end
   end
   
   class Sampler
     attr_accessor :default_instance
-    attr_reader :configured_default_attrs, :default_instance_proc, :validations
+    attr_reader   :configured_default_attrs, :default_instance_proc,
+                  :model_class, :validations
     
     def initialize(
           model_class, configured_default_attrs, default_instance_proc
@@ -251,16 +202,26 @@ module SampleModels
       @validations = Hash.new { |h, field| h[field] = [] }
     end
     
+    def belongs_to_assoc_for( column )
+      belongs_to_associations.detect { |a| a.primary_key_name == column.name }
+    end
+    
+    def belongs_to_associations
+      @model_class.reflect_on_all_associations.select { |assoc|
+        assoc.macro == :belongs_to
+      }
+    end
+    
     def clear_default_creation
       @default_creation = nil
     end
     
     def custom_sample(custom_attrs)
-      SampleModels::CustomCreation.new(@model_class, custom_attrs).run
+      SampleModels::CustomCreation.new(self, custom_attrs).run
     end
     
     def default_creation
-      @default_creation ||= SampleModels::DefaultCreation.new(@model_class)
+      @default_creation ||= SampleModels::DefaultCreation.new(self)
       @default_creation
     end
     
@@ -272,6 +233,44 @@ module SampleModels
     def record_validation(*args)
       field = args[1]
       @validations[field] << args
+    end
+    
+    def unconfigured_default_based_on_validations(column)
+      unless validations[column.name.to_sym].empty?
+        inclusion = validations[column.name.to_sym].detect { |ary|
+          ary.first == :validates_inclusion_of
+        }
+        if inclusion
+          inclusion.last[:in].first
+        else
+          as_email = validations[column.name.to_sym].detect { |ary|
+            ary.first == :validates_email_format_of
+          }
+          if as_email
+            "#{SampleModels.random_word}@#{SampleModels.random_word}.com"
+          end
+        end
+      end
+    end
+    
+    def unconfigured_default_for( column )
+      udf = unconfigured_default_based_on_validations column
+      udf || case column.type
+        when :binary, :string, :text
+          "Test #{ column.name }"
+        when :boolean
+          true
+        when :date
+          Date.today
+        when :datetime
+          Time.now.utc
+        when :float
+          1.0
+        when :integer
+          1
+        else
+          raise "No default value for type #{ column.type.inspect }"
+      end
     end
   end
   
@@ -309,4 +308,4 @@ module ActiveRecord
   end
 end
 
-end
+end # if RAILS_ENV == 'test'
