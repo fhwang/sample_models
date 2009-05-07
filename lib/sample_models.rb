@@ -144,7 +144,12 @@ module SampleModels
         when :float
           1.0
         when :integer
-          1
+          if assoc = @sampler.belongs_to_assoc_for( column )
+            assoc_class = Module.const_get assoc.class_name
+            SampleModels.samplers[assoc_class].default_creation.instance.id
+          else
+            1
+          end
         else
           raise "No default value for type #{ column.type.inspect }"
       end

@@ -28,6 +28,14 @@ silence_stream(STDOUT) do
       comment.integer 'blog_post_id', 'user_id'
       comment.text    'comment'
     end
+    
+    create_table 'episodes', :force => true do |episode|
+      episode.integer 'show_id'
+    end
+    
+    create_table 'shows', :force => true do |show|
+      show.string 'name'
+    end
 
     create_table 'users', :force => true do |user|
       user.date    'birthday'
@@ -36,6 +44,10 @@ silence_stream(STDOUT) do
                    'email'
       user.text    'bio', 'irc_nick'
       user.integer 'favorite_blog_post_id'
+    end
+    
+    create_table 'videos', :force => true do |video|
+      video.integer 'show_id', 'episode_id'
     end
   end
 end
@@ -61,6 +73,16 @@ class Comment < ActiveRecord::Base
   validates_presence_of :user_id
 end
 
+class Episode < ActiveRecord::Base
+  belongs_to :show
+  
+  validates_presence_of :show_id
+end
+
+class Show < ActiveRecord::Base
+  validates_uniqueness_of :name
+end
+
 class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
@@ -68,6 +90,19 @@ class User < ActiveRecord::Base
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w( m f )
   validates_uniqueness_of   :login
+end
+
+class Video < ActiveRecord::Base
+  belongs_to :show
+  belongs_to :episode
+  
+  def validate
+    if episode && episode.show_id != show_id
+      puts episode.show_id
+      puts show_id
+      errors.add "needs same show as the episode"
+    end
+  end
 end
 
 # SampleModel configuration
@@ -223,6 +258,14 @@ describe 'Model with a nil default value' do
   it 'should set that value in default_sample' do
     @user = User.default_sample
     @user.irc_nick.should be_nil
+  end
+end
+
+describe 'Model with a redundant but validated association' do
+  it 'should create a valid default_sample when the 2nd-degree association already exists' do
+    Show.create! :name => 'something to take ID 1'
+    Show.create! :name => 'Test name'
+    Video.default_sample
   end
 end
 
