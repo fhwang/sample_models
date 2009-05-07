@@ -145,16 +145,7 @@ module SampleModels
     end
     
     def run
-      valid_instance_already_exists = false
       if ds = @sampler.default_instance
-        begin
-          ds.reload
-          valid_instance_already_exists = true
-        rescue ActiveRecord::RecordNotFound
-          # we'll reset the instance below
-        end
-      end
-      if valid_instance_already_exists
         @sampler.belongs_to_associations.each do |assoc|
           recreated_associations = false
           unless assoc.class_name == model_class.name
@@ -180,19 +171,14 @@ module SampleModels
     end
     
     def set_default
-      if proc = @sampler.default_instance_proc
-        default_instance = proc.call
-      else
-        default_instance = create!
-      end
-      @sampler.default_instance = default_instance
+      @sampler.default_instance = @sampler.create_default_instance_from_proc ||
+                                  create!
     end
   end
   
   class Sampler
-    attr_accessor :default_instance
-    attr_reader   :configured_default_attrs, :default_instance_proc,
-                  :model_class, :validations
+    attr_reader :configured_default_attrs, :model_class, :validations
+    attr_writer :default_instance
     
     def initialize(
           model_class, configured_default_attrs, default_instance_proc
@@ -216,6 +202,10 @@ module SampleModels
       @default_creation = nil
     end
     
+    def create_default_instance_from_proc
+      @default_instance_proc.call if @default_instance_proc
+    end
+    
     def custom_sample(custom_attrs)
       SampleModels::CustomCreation.new(self, custom_attrs).run
     end
@@ -223,6 +213,17 @@ module SampleModels
     def default_creation
       @default_creation ||= SampleModels::DefaultCreation.new(self)
       @default_creation
+    end
+    
+    def default_instance
+      if @default_instance
+        begin
+          @default_instance.reload
+          @default_instance
+        rescue ActiveRecord::RecordNotFound
+          # return nil
+        end
+      end
     end
     
     def default_sample
