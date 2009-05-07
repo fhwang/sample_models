@@ -65,7 +65,7 @@ module SampleModels
           unless assoc.class_name == @model_class.name
             assoc_class = Module.const_get assoc.class_name
             @deferred_assoc_creations[name.to_sym] =
-                SampleModels::DefaultCreation.new(assoc_class)
+                SampleModels.samplers[assoc_class].default_creation
           end
         else
           default_att_value = nil
@@ -95,6 +95,11 @@ module SampleModels
         raise "#{@model_class.name} validation failed: #{$1}"
       end
       update_associations
+      @instance
+    end
+    
+    def instance
+      run unless @instance
       @instance
     end
     
@@ -144,7 +149,7 @@ module SampleModels
       needs_save = false
       each_updateable_association do |name, creation|
         needs_save = true
-        @instance.send("#{name}=", creation.run.id)
+        @instance.send("#{name}=", creation.instance.id)
       end
       @instance.save if needs_save
     end
@@ -158,7 +163,7 @@ module SampleModels
     end
     
     def run
-      create!
+      @instance = create!
     end
     
     def each_updateable_association
@@ -190,7 +195,7 @@ module SampleModels
       else
         set_default
       end
-      sampler.default_instance
+      @instance = sampler.default_instance
     end
     
     def set_default
@@ -215,6 +220,15 @@ module SampleModels
       @validations = Hash.new { |h, field| h[field] = [] }
     end
     
+    def clear_default_creation
+      @default_creation = nil
+    end
+    
+    def default_creation
+      @default_creation ||= SampleModels::DefaultCreation.new(@model_class)
+      @default_creation
+    end
+    
     def record_validation(*args)
       field = args[1]
       @validations[field] << args
@@ -227,7 +241,8 @@ module SampleModels
     end
     
     def default_sample
-      SampleModels::DefaultCreation.new(self).run
+      SampleModels.samplers.values.each(&:clear_default_creation)
+      SampleModels.samplers[self].default_creation.run
     end
   end
 end
