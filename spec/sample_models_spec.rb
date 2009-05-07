@@ -67,6 +67,7 @@ class User < ActiveRecord::Base
 
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w( m f )
+  validates_uniqueness_of   :login
 end
 
 # SampleModel configuration
@@ -158,11 +159,18 @@ describe 'Model with a belongs_to association' do
     blog_post.user.should_not == User.default_sample
   end
   
+  it 'should set a custom value by the column name, even when the default sample has been previously set' do
+    User.default_sample # tripped a strange bug
+    user = User.custom_sample
+    blog_post = BlogPost.custom_sample :user_id => user.id
+    blog_post.user.should_not == User.default_sample
+  end
+
   it 'should have no problem with circular associations' do
     User.default_sample.favorite_blog_post.should == BlogPost.default_sample
     BlogPost.default_sample.user.should == User.default_sample
   end
-
+  
   it 'should update the default association if it gets deleted' do
     blog_post_before = BlogPost.default_sample
     blog_post_before.user_id.should == User.default_sample.id
@@ -215,6 +223,28 @@ describe 'Model with a nil default value' do
   it 'should set that value in default_sample' do
     @user = User.default_sample
     @user.irc_nick.should be_nil
+  end
+end
+
+describe 'Model with a unique value' do
+  it 'should retrieve by that unique value for the default instance' do
+    User.destroy_all
+    user = User.create!(
+      :login => 'Test login', :gender => 'f', :email => 'foo@bar.com'
+    )
+    default_sample = User.default_sample
+    default_sample.should == user
+    default_sample.gender.should == 'f'
+    default_sample.email.should  == 'foo@bar.com'
+  end
+  
+  it 'should create a random unique value for each custom_sample' do
+    logins = {}
+    10.times do
+      custom = User.custom_sample
+      logins[custom.login].should be_nil
+      logins[custom.login] = true
+    end
   end
 end
 

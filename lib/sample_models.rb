@@ -78,7 +78,7 @@ module SampleModels
             cd = cd.call if cd.is_a?( Proc )
             default_att_value = cd
           else
-            default_att_value = @sampler.unconfigured_default_for column
+            default_att_value = unconfigured_default_for column
           end
           @default_attrs[name.to_sym] = default_att_value
         end
@@ -86,8 +86,6 @@ module SampleModels
     end
     
     def create!
-      build_attrs_and_assoc_creations
-      set_attributes
       @instance = begin
         model_class.create! @attributes
       rescue ActiveRecord::RecordInvalid
@@ -96,6 +94,22 @@ module SampleModels
       end
       update_associations
       @instance
+    end
+    
+    def find_by_unique_attributes
+      unless @sampler.unique_attributes.empty?
+        find_attributes = {}
+        @sampler.unique_attributes.each do |name|
+          find_attributes[name] = @attributes[name]
+        end
+        model_class.find(:first, :conditions => find_attributes)
+      end
+    end
+    
+    def find_or_create
+      build_attrs_and_assoc_creations
+      set_attributes
+      find_by_unique_attributes || create!
     end
     
     def instance
@@ -115,6 +129,26 @@ module SampleModels
       end
       @instance.save if needs_save
     end
+    
+    def unconfigured_default_for( column )
+      udf = @sampler.unconfigured_default_based_on_validations column
+      udf || case column.type
+        when :binary, :string, :text
+          unconfigured_default_for_text(column)
+        when :boolean
+          true
+        when :date
+          Date.today
+        when :datetime
+          Time.now.utc
+        when :float
+          1.0
+        when :integer
+          1
+        else
+          raise "No default value for type #{ column.type.inspect }"
+      end
+    end
   end
   
   class CustomCreation < Creation
@@ -124,7 +158,7 @@ module SampleModels
     end
     
     def run
-      @instance = create!
+      @instance = find_or_create
     end
     
     def set_attributes
@@ -134,6 +168,14 @@ module SampleModels
     def each_updateable_association
       @deferred_assoc_creations.each do |name, creation|
         yield name, creation unless @custom_attrs.keys.include?(name)
+      end
+    end
+    
+    def unconfigured_default_for_text(column)
+      if @sampler.model_validates_uniqueness_of?(column.name)
+        SampleModels.random_word
+      else
+        "Test #{ column.name }"
       end
     end
   end
@@ -172,8 +214,12 @@ module SampleModels
     end
     
     def set_default
-      @sampler.default_instance = @sampler.create_default_instance_from_proc ||
-                                  create!
+      @sampler.default_instance =
+          @sampler.create_default_instance_from_proc || find_or_create
+    end
+    
+    def unconfigured_default_for_text(column)
+      "Test #{ column.name }"
     end
   end
   
@@ -236,6 +282,10 @@ module SampleModels
       }
     end
     
+    def model_validates_uniqueness_of?(column_name)
+      unique_attributes.include?(column_name.to_sym)
+    end
+    
     def record_validation(*args)
       field = args[1]
       @validations[field] << args
@@ -259,24 +309,12 @@ module SampleModels
       end
     end
     
-    def unconfigured_default_for( column )
-      udf = unconfigured_default_based_on_validations column
-      udf || case column.type
-        when :binary, :string, :text
-          "Test #{ column.name }"
-        when :boolean
-          true
-        when :date
-          Date.today
-        when :datetime
-          Time.now.utc
-        when :float
-          1.0
-        when :integer
-          1
-        else
-          raise "No default value for type #{ column.type.inspect }"
-      end
+    def unique_attributes
+      validations.
+          select { |name, args_array|
+            args_array.any? { |args| args.first == :validates_uniqueness_of }
+          }.
+          map { |name, args_array| name }
     end
   end
   
@@ -299,7 +337,8 @@ module ActiveRecord
   module Validations
     module ClassMethods
       [:validates_email_format_of,
-       :validates_inclusion_of, :validates_presence_of].each do |validation|
+       :validates_inclusion_of, :validates_presence_of, 
+       :validates_uniqueness_of].each do |validation|
         if method_defined?(validation)
           define_method "#{validation}_with_sample_models".to_sym do |*args|
             send "#{validation}_without_sample_models".to_sym, *args
