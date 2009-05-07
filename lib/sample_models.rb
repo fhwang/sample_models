@@ -56,14 +56,20 @@ module SampleModels
   end
   
   class Creation
+    attr_reader :model_class
+    
     def initialize(model_class)
       @model_class = model_class
     end
     
     def belongs_to_assoc_for( column )
-      assocs = @model_class.reflect_on_all_associations
-      belongs_to_assocs = assocs.select { |assoc| assoc.macro == :belongs_to }
-      belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
+      belongs_to_associations.detect { |a| a.primary_key_name == column.name }
+    end
+    
+    def belongs_to_associations
+      @model_class.reflect_on_all_associations.select { |assoc|
+        assoc.macro == :belongs_to
+      }
     end
     
     def build_attrs_and_assoc_creations
@@ -189,11 +195,29 @@ module SampleModels
     end
     
     def run
+      valid_instance_already_exists = false
       if ds = sampler.default_instance
         begin
           ds.reload
+          valid_instance_already_exists = true
         rescue ActiveRecord::RecordNotFound
-          set_default
+          # we'll reset the instance below
+        end
+      end
+      if valid_instance_already_exists
+        belongs_to_associations.each do |assoc|
+          recreated_associations = false
+          unless assoc.class_name == @model_class.name
+            assoc_class = Module.const_get assoc.class_name
+            unless assoc_class.find_by_id(ds.send(assoc.name))
+              ds.send(
+                "#{assoc.name}=", 
+                SampleModels.samplers[assoc_class].default_creation.instance
+              )
+              recreated_associations = true
+            end
+          end
+          ds.save if recreated_associations
         end
       else
         set_default

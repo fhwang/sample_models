@@ -30,11 +30,12 @@ silence_stream(STDOUT) do
     end
 
     create_table 'users', :force => true do |user|
-      user.date   'birthday'
-      user.float  'avg_rating'
-      user.string 'login', 'password', 'homepage', 'creation_note', 'gender',
-                  'email'
-      user.text   'bio', 'irc_nick'
+      user.date    'birthday'
+      user.float   'avg_rating'
+      user.string  'login', 'password', 'homepage', 'creation_note', 'gender',
+                   'email'
+      user.text    'bio', 'irc_nick'
+      user.integer 'favorite_blog_post_id'
     end
   end
 end
@@ -56,6 +57,9 @@ class Comment < ActiveRecord::Base
 end
 
 class User < ActiveRecord::Base
+  belongs_to :favorite_blog_post,
+             :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
+
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w( m f )
 end
@@ -147,6 +151,20 @@ describe 'Model with a belongs_to association' do
     user = User.custom_sample
     blog_post = BlogPost.custom_sample :user_id => user.id
     blog_post.user.should_not == User.default_sample
+  end
+  
+  it 'should have no problem with circular associations' do
+    User.default_sample.favorite_blog_post.should == BlogPost.default_sample
+    BlogPost.default_sample.user.should == User.default_sample
+  end
+
+  it 'should update the default association if it gets deleted' do
+    blog_post_before = BlogPost.default_sample
+    blog_post_before.user_id.should == User.default_sample.id
+    User.destroy_all
+    User.find_by_id(blog_post_before.user_id).should be_nil
+    blog_post_after = BlogPost.default_sample
+    blog_post_after.user_id.should == User.default_sample.id
   end
 end
 
