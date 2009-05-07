@@ -51,6 +51,16 @@ module SampleModels
     end
   end
   
+  class ProxiedAssociation
+    def initialize(assoc_class)
+      @assoc_class = assoc_class
+    end
+    
+    def instance
+      SampleModels.samplers[@assoc_class].default_creation.instance
+    end
+  end
+  
   class Creation
     def initialize(sampler)
       @sampler = sampler
@@ -58,20 +68,20 @@ module SampleModels
     
     def build_attrs_and_assoc_creations
       @default_attrs = {}
-      @deferred_assoc_creations = {}
+      @proxied_associations = {}
       model_class.columns_hash.each do |name, column|
-        deferred_assoc_creation = false
+        proxied_association = false
         if assoc = @sampler.belongs_to_assoc_for( column )
           unless @sampler.model_validates_presence_of?(column.name)
             unless assoc.class_name == model_class.name
               assoc_class = Module.const_get assoc.class_name
-              @deferred_assoc_creations[name.to_sym] =
-                  SampleModels.samplers[assoc_class].default_creation
+              @proxied_associations[name.to_sym] =
+                  ProxiedAssociation.new(assoc_class)
             end
-            deferred_assoc_creation = true
+            proxied_association = true
           end
         end
-        unless deferred_assoc_creation
+        unless proxied_association
           default_att_value = nil
           if @sampler.configured_default_attrs.key? name.to_sym
             cd = @sampler.configured_default_attrs[name.to_sym]
@@ -123,9 +133,9 @@ module SampleModels
     
     def update_associations
       needs_save = false
-      each_updateable_association do |name, creation|
+      each_updateable_association do |name, proxied_association|
         needs_save = true
-        @instance.send("#{name}=", creation.instance.id)
+        @instance.send("#{name}=", proxied_association.instance.id)
       end
       @instance.save! if needs_save
     end
@@ -171,8 +181,10 @@ module SampleModels
     end
     
     def each_updateable_association
-      @deferred_assoc_creations.each do |name, creation|
-        yield name, creation unless @custom_attrs.keys.include?(name)
+      @proxied_associations.each do |name, proxied_association|
+        unless @custom_attrs.keys.include?(name)
+          yield name, proxied_association
+        end
       end
     end
     
@@ -187,8 +199,8 @@ module SampleModels
   
   class DefaultCreation < Creation
     def each_updateable_association
-      @deferred_assoc_creations.each do |name, creation|
-        yield name, creation
+      @proxied_associations.each do |name, proxied_association|
+        yield name, proxied_association
       end
     end
     
