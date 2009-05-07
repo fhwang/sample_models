@@ -58,6 +58,15 @@ module SampleModels
   class Creation
     def initialize(model_class)
       @model_class = model_class
+    end
+    
+    def belongs_to_assoc_for( column )
+      assocs = @model_class.reflect_on_all_associations
+      belongs_to_assocs = assocs.select { |assoc| assoc.macro == :belongs_to }
+      belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
+    end
+    
+    def build_attrs_and_assoc_creations
       @default_attrs = {}
       @deferred_assoc_creations = {}
       @model_class.columns_hash.each do |name, column|
@@ -81,13 +90,9 @@ module SampleModels
       end
     end
     
-    def belongs_to_assoc_for( column )
-      assocs = @model_class.reflect_on_all_associations
-      belongs_to_assocs = assocs.select { |assoc| assoc.macro == :belongs_to }
-      belongs_to_assocs.detect { |a| a.primary_key_name == column.name }
-    end
-    
     def create!
+      build_attrs_and_assoc_creations
+      set_attributes
       @instance = begin
         @model_class.create! @attributes
       rescue ActiveRecord::RecordInvalid
@@ -159,11 +164,14 @@ module SampleModels
     def initialize(model_class, custom_attrs = {})
       super model_class
       @custom_attrs = custom_attrs
-      @attributes = @default_attrs.merge @custom_attrs
     end
     
     def run
       @instance = create!
+    end
+    
+    def set_attributes
+      @attributes = @default_attrs.merge @custom_attrs
     end
     
     def each_updateable_association
@@ -174,11 +182,6 @@ module SampleModels
   end
   
   class DefaultCreation < Creation
-    def initialize(model_class)
-      super model_class
-      @attributes = @default_attrs
-    end
-    
     def each_updateable_association
       @deferred_assoc_creations.each do |name, creation|
         yield name, creation
@@ -196,6 +199,10 @@ module SampleModels
         set_default
       end
       @instance = sampler.default_instance
+    end
+    
+    def set_attributes
+      @attributes = @default_attrs
     end
     
     def set_default
@@ -224,9 +231,18 @@ module SampleModels
       @default_creation = nil
     end
     
+    def custom_sample(custom_attrs)
+      SampleModels::CustomCreation.new(@model_class, custom_attrs).run
+    end
+    
     def default_creation
       @default_creation ||= SampleModels::DefaultCreation.new(@model_class)
       @default_creation
+    end
+    
+    def default_sample
+      SampleModels.samplers.values.each(&:clear_default_creation)
+      default_creation.run
     end
     
     def record_validation(*args)
@@ -237,12 +253,11 @@ module SampleModels
   
   module ARClassMethods
     def custom_sample( custom_attrs = {} )
-      SampleModels::CustomCreation.new(self, custom_attrs).run
+      SampleModels.samplers[self].custom_sample custom_attrs
     end
     
     def default_sample
-      SampleModels.samplers.values.each(&:clear_default_creation)
-      SampleModels.samplers[self].default_creation.run
+      SampleModels.samplers[self].default_sample
     end
   end
 end
