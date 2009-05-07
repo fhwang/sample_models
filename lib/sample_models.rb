@@ -188,7 +188,17 @@ module SampleModels
     end
     
     def set_attributes
-      @attributes = @default_attrs.merge @custom_attrs
+      @attributes = @default_attrs.clone
+      @custom_attrs.each do |field_name, value|
+        if value.is_a?(Hash) &&
+           assoc = @sampler.belongs_to_assoc_for(field_name)
+          assoc_class = Module.const_get assoc.class_name
+          sampler = SampleModels.samplers[assoc_class]
+          @attributes[field_name] = sampler.custom_sample value
+        else
+          @attributes[field_name] = value
+        end
+      end
     end
     
     def each_updateable_association
@@ -263,8 +273,16 @@ module SampleModels
       @validations = Hash.new { |h, field| h[field] = [] }
     end
     
-    def belongs_to_assoc_for( column )
-      belongs_to_associations.detect { |a| a.primary_key_name == column.name }
+    def belongs_to_assoc_for( column_or_name )
+      if column_or_name.is_a?(String) or column_or_name.is_a?(Symbol)
+        belongs_to_associations.detect { |a|
+          a.name.to_sym == column_or_name.to_sym
+        }
+      else
+        belongs_to_associations.detect { |a|
+          a.primary_key_name == column_or_name.name
+        }
+      end
     end
     
     def belongs_to_associations

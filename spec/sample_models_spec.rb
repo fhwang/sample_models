@@ -34,6 +34,7 @@ silence_stream(STDOUT) do
     end
     
     create_table 'networks', :force => true do |network|
+      network.string 'name'
     end
     
     create_table 'shows', :force => true do |show|
@@ -232,6 +233,15 @@ describe 'Model with a belongs_to association' do
     User.find_by_id(blog_post_before.user_id).should be_nil
     blog_post_after = BlogPost.default_sample
     blog_post_after.user_id.should == User.default_sample.id
+  end
+  
+  it 'should allow creation of a custom associated instance with a hash' do
+    show = Show.custom_sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    show.name.should == "The Daily Show"
+    show.network.should_not == Network.default_sample
+    show.network.name.should == 'Comedy Central'
   end
 end
 
