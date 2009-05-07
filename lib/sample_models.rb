@@ -52,18 +52,30 @@ module SampleModels
   end
   
   class ProxiedAssociation
-    def initialize(assoc_class)
-      @assoc_class = assoc_class
+    def initialize(assoc)
+      @assoc = assoc
+    end
+    
+    def assoc_class
+      Module.const_get @assoc.class_name
+    end
+    
+    def name
+      @assoc.name
     end
     
     def instance
-      SampleModels.samplers[@assoc_class].default_creation.instance
+      SampleModels.samplers[assoc_class].default_creation.instance
     end
   end
   
   class Creation
     def initialize(sampler)
       @sampler = sampler
+    end
+    
+    def assoc_primary_key_name
+      @belongs_to_assoc.primary_key_name if @belongs_to_assoc
     end
     
     def build_attrs_and_assoc_creations
@@ -74,9 +86,8 @@ module SampleModels
         if assoc = @sampler.belongs_to_assoc_for( column )
           unless @sampler.model_validates_presence_of?(column.name)
             unless assoc.class_name == model_class.name
-              assoc_class = Module.const_get assoc.class_name
               @proxied_associations[name.to_sym] =
-                  ProxiedAssociation.new(assoc_class)
+                  ProxiedAssociation.new(assoc)
             end
             proxied_association = true
           end
@@ -181,8 +192,10 @@ module SampleModels
     end
     
     def each_updateable_association
+      custom_keys = @custom_attrs.keys
       @proxied_associations.each do |name, proxied_association|
-        unless @custom_attrs.keys.include?(name)
+        unless custom_keys.include?(name) or
+               custom_keys.include?(proxied_association.name)
           yield name, proxied_association
         end
       end

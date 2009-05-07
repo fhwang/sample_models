@@ -33,8 +33,12 @@ silence_stream(STDOUT) do
       episode.integer 'show_id'
     end
     
+    create_table 'networks', :force => true do |network|
+    end
+    
     create_table 'shows', :force => true do |show|
-      show.string 'name'
+      show.string  'name'
+      show.integer 'network_id'
     end
 
     create_table 'users', :force => true do |user|
@@ -79,8 +83,13 @@ class Episode < ActiveRecord::Base
   validates_presence_of :show_id
 end
 
+class Network < ActiveRecord::Base
+end
+
 class Show < ActiveRecord::Base
   validates_uniqueness_of :name
+  
+  belongs_to :network
 end
 
 class User < ActiveRecord::Base
@@ -98,8 +107,6 @@ class Video < ActiveRecord::Base
   
   def validate
     if episode && episode.show_id != show_id
-      puts episode.show_id
-      puts show_id
       errors.add "needs same show as the episode"
     end
   end
@@ -188,6 +195,12 @@ describe 'Model with a belongs_to association' do
     blog_post.user.should_not == User.default_sample
   end
   
+  it 'should set a custom nil value by the association name' do
+    show = Show.custom_sample :network => nil
+    show.network.should    be_nil
+    show.network_id.should be_nil
+  end
+  
   it 'should set a custom value by the column name' do
     user = User.custom_sample
     blog_post = BlogPost.custom_sample :user_id => user.id
@@ -201,6 +214,12 @@ describe 'Model with a belongs_to association' do
     blog_post.user.should_not == User.default_sample
   end
 
+  it 'should set a custom nil value by the association name' do
+    show = Show.custom_sample :network_id => nil
+    show.network.should    be_nil
+    show.network_id.should be_nil
+  end
+  
   it 'should have no problem with circular associations' do
     User.default_sample.favorite_blog_post.should == BlogPost.default_sample
     BlogPost.default_sample.user.should == User.default_sample
