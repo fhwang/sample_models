@@ -127,7 +127,7 @@ module SampleModels
         needs_save = true
         @instance.send("#{name}=", creation.instance.id)
       end
-      @instance.save if needs_save
+      @instance.save! if needs_save
     end
     
     def unconfigured_default_for( column )
@@ -201,7 +201,7 @@ module SampleModels
               recreated_associations = true
             end
           end
-          ds.save if recreated_associations
+          ds.save! if recreated_associations
         end
       else
         set_default
