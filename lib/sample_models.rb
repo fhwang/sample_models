@@ -42,28 +42,8 @@ module SampleModels
       @attributes = {}
       super @attributes
       @proxied_associations = {}
-      model_class.columns_hash.each do |name, column|
-        proxied_association = false
-        if assoc = sampler.belongs_to_assoc_for( column )
-          unless sampler.model_validates_presence_of?(column.name)
-            unless assoc.class_name == model_class.name
-              @proxied_associations[name.to_sym] =
-                  ProxiedAssociation.new(assoc)
-            end
-            proxied_association = true
-          end
-        end
-        unless proxied_association
-          default_att_value = nil
-          if sampler.configured_default_attrs.key? name.to_sym
-            cd = sampler.configured_default_attrs[name.to_sym]
-            cd = cd.call if cd.is_a?( Proc )
-            default_att_value = cd
-          else
-            default_att_value = unconfigured_default_for column
-          end
-          @attributes[name.to_sym] = default_att_value
-        end
+      @model_class.columns_hash.each do |name, column|
+        build_default_attr_or_proxied_association name, column
       end
       custom_attrs ||= {}
       custom_attrs.each do |field_name, value|
@@ -75,6 +55,29 @@ module SampleModels
         else
           @attributes[field_name] = value
         end
+      end
+    end
+    
+    def build_default_attr_or_proxied_association(name, column)
+      proxied_association = false
+      if assoc = sampler.belongs_to_assoc_for( column )
+        unless sampler.model_validates_presence_of?(column.name)
+          unless assoc.class_name == @model_class.name
+            @proxied_associations[name.to_sym] = ProxiedAssociation.new(assoc)
+          end
+          proxied_association = true
+        end
+      end
+      unless proxied_association
+        default_att_value = nil
+        if sampler.configured_default_attrs.key? name.to_sym
+          cd = sampler.configured_default_attrs[name.to_sym]
+          cd = cd.call if cd.is_a?( Proc )
+          default_att_value = cd
+        else
+          default_att_value = unconfigured_default_for column
+        end
+        @attributes[name.to_sym] = default_att_value
       end
     end
     
