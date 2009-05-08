@@ -1,5 +1,7 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
 
+require 'delegate'
+  
 module SampleModels
   mattr_accessor :configured_defaults
   self.configured_defaults = Hash.new { |h,k| h[k] = {} }
@@ -32,6 +34,44 @@ module SampleModels
     super
   end
   
+  class Attributes < DelegateClass(Hash)
+    attr_reader :proxied_associations
+    
+    def initialize(
+          model_class, default_attrs, custom_attrs, proxied_associations
+        )
+      custom_attrs ||= {}
+      @model_class = model_class
+      @attributes = default_attrs.clone
+      super @attributes
+      custom_attrs.each do |field_name, value|
+        if value.is_a?(Hash) &&
+           assoc = sampler.belongs_to_assoc_for(field_name)
+          assoc_class = Module.const_get assoc.class_name
+          sampler = SampleModels.samplers[assoc_class]
+          @attributes[field_name] = sampler.custom_sample value
+        else
+          @attributes[field_name] = value
+        end
+      end
+      @proxied_associations = proxied_associations
+    end
+    
+    def sampler
+      SampleModels.samplers[@model_class]
+    end
+  end
+  
+  module ARClassMethods
+    def custom_sample( custom_attrs = {} )
+      SampleModels.samplers[self].custom_sample custom_attrs
+    end
+    
+    def default_sample
+      SampleModels.samplers[self].default_sample
+    end
+  end
+  
   class ConfigureRecipient
     def initialize( model_class )
       @model_class = model_class
@@ -48,24 +88,6 @@ module SampleModels
       else
         super
       end
-    end
-  end
-  
-  class ProxiedAssociation
-    def initialize(assoc)
-      @assoc = assoc
-    end
-    
-    def assoc_class
-      Module.const_get @assoc.class_name
-    end
-    
-    def name
-      @assoc.name
-    end
-    
-    def instance
-      SampleModels.samplers[assoc_class].default_creation.instance
     end
   end
   
@@ -129,7 +151,9 @@ module SampleModels
     
     def find_or_create
       build_attrs_and_assoc_creations
-      set_attributes
+      @attributes = Attributes.new(
+        model_class, @default_attrs, @custom_attrs, @proxied_associations
+      )
       find_by_unique_attributes || create!
     end
     
@@ -187,23 +211,9 @@ module SampleModels
       @instance = find_or_create
     end
     
-    def set_attributes
-      @attributes = @default_attrs.clone
-      @custom_attrs.each do |field_name, value|
-        if value.is_a?(Hash) &&
-           assoc = @sampler.belongs_to_assoc_for(field_name)
-          assoc_class = Module.const_get assoc.class_name
-          sampler = SampleModels.samplers[assoc_class]
-          @attributes[field_name] = sampler.custom_sample value
-        else
-          @attributes[field_name] = value
-        end
-      end
-    end
-    
     def each_updateable_association
       custom_keys = @custom_attrs.keys
-      @proxied_associations.each do |name, proxied_association|
+      @attributes.proxied_associations.each do |name, proxied_association|
         unless custom_keys.include?(name) or
                custom_keys.include?(proxied_association.name)
           yield name, proxied_association
@@ -222,7 +232,7 @@ module SampleModels
   
   class DefaultCreation < Creation
     def each_updateable_association
-      @proxied_associations.each do |name, proxied_association|
+      @attributes.proxied_associations.each do |name, proxied_association|
         yield name, proxied_association
       end
     end
@@ -249,10 +259,6 @@ module SampleModels
       @instance = @sampler.default_instance
     end
     
-    def set_attributes
-      @attributes = @default_attrs
-    end
-    
     def set_default
       @sampler.default_instance =
           @sampler.create_default_instance_from_proc || find_or_create
@@ -260,6 +266,24 @@ module SampleModels
     
     def unconfigured_default_for_text(column)
       "Test #{ column.name }"
+    end
+  end
+  
+  class ProxiedAssociation
+    def initialize(assoc)
+      @assoc = assoc
+    end
+    
+    def assoc_class
+      Module.const_get @assoc.class_name
+    end
+    
+    def name
+      @assoc.name
+    end
+    
+    def instance
+      SampleModels.samplers[assoc_class].default_creation.instance
     end
   end
   
@@ -363,16 +387,6 @@ module SampleModels
             args_array.any? { |args| args.first == :validates_uniqueness_of }
           }.
           map { |name, args_array| name }
-    end
-  end
-  
-  module ARClassMethods
-    def custom_sample( custom_attrs = {} )
-      SampleModels.samplers[self].custom_sample custom_attrs
-    end
-    
-    def default_sample
-      SampleModels.samplers[self].default_sample
     end
   end
 end
