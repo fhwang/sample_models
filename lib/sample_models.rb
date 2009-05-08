@@ -37,13 +37,35 @@ module SampleModels
   class Attributes < DelegateClass(Hash)
     attr_reader :proxied_associations
     
-    def initialize(
-          model_class, default_attrs, custom_attrs, proxied_associations
-        )
-      custom_attrs ||= {}
-      @model_class = model_class
-      @attributes = default_attrs.clone
+    def initialize(model_class, default, custom_attrs)
+      @model_class, @default = model_class, default
+      @attributes = {}
       super @attributes
+      @proxied_associations = {}
+      model_class.columns_hash.each do |name, column|
+        proxied_association = false
+        if assoc = sampler.belongs_to_assoc_for( column )
+          unless sampler.model_validates_presence_of?(column.name)
+            unless assoc.class_name == model_class.name
+              @proxied_associations[name.to_sym] =
+                  ProxiedAssociation.new(assoc)
+            end
+            proxied_association = true
+          end
+        end
+        unless proxied_association
+          default_att_value = nil
+          if sampler.configured_default_attrs.key? name.to_sym
+            cd = sampler.configured_default_attrs[name.to_sym]
+            cd = cd.call if cd.is_a?( Proc )
+            default_att_value = cd
+          else
+            default_att_value = unconfigured_default_for column
+          end
+          @attributes[name.to_sym] = default_att_value
+        end
+      end
+      custom_attrs ||= {}
       custom_attrs.each do |field_name, value|
         if value.is_a?(Hash) &&
            assoc = sampler.belongs_to_assoc_for(field_name)
@@ -54,11 +76,43 @@ module SampleModels
           @attributes[field_name] = value
         end
       end
-      @proxied_associations = proxied_associations
     end
     
     def sampler
       SampleModels.samplers[@model_class]
+    end
+    
+    def unconfigured_default_for( column )
+      udf = sampler.unconfigured_default_based_on_validations column
+      udf || case column.type
+        when :binary, :string, :text
+          unconfigured_default_for_text(column)
+        when :boolean
+          true
+        when :date
+          Date.today
+        when :datetime
+          Time.now.utc
+        when :float
+          1.0
+        when :integer
+          if assoc = sampler.belongs_to_assoc_for( column )
+            assoc_class = Module.const_get assoc.class_name
+            SampleModels.samplers[assoc_class].default_creation.instance.id
+          else
+            1
+          end
+        else
+          raise "No default value for type #{ column.type.inspect }"
+      end
+    end
+    
+    def unconfigured_default_for_text(column)
+      if !@default and sampler.model_validates_uniqueness_of?(column.name)
+        SampleModels.random_word
+      else
+        "Test #{ column.name }"
+      end
     end
   end
   
@@ -100,34 +154,6 @@ module SampleModels
       @belongs_to_assoc.primary_key_name if @belongs_to_assoc
     end
     
-    def build_attrs_and_assoc_creations
-      @default_attrs = {}
-      @proxied_associations = {}
-      model_class.columns_hash.each do |name, column|
-        proxied_association = false
-        if assoc = @sampler.belongs_to_assoc_for( column )
-          unless @sampler.model_validates_presence_of?(column.name)
-            unless assoc.class_name == model_class.name
-              @proxied_associations[name.to_sym] =
-                  ProxiedAssociation.new(assoc)
-            end
-            proxied_association = true
-          end
-        end
-        unless proxied_association
-          default_att_value = nil
-          if @sampler.configured_default_attrs.key? name.to_sym
-            cd = @sampler.configured_default_attrs[name.to_sym]
-            cd = cd.call if cd.is_a?( Proc )
-            default_att_value = cd
-          else
-            default_att_value = unconfigured_default_for column
-          end
-          @default_attrs[name.to_sym] = default_att_value
-        end
-      end
-    end
-    
     def create!
       @instance = begin
         model_class.create! @attributes
@@ -150,9 +176,8 @@ module SampleModels
     end
     
     def find_or_create
-      build_attrs_and_assoc_creations
       @attributes = Attributes.new(
-        model_class, @default_attrs, @custom_attrs, @proxied_associations
+        model_class, self.is_a?(DefaultCreation), @custom_attrs
       )
       find_by_unique_attributes || create!
     end
@@ -174,41 +199,12 @@ module SampleModels
       end
       @instance.save! if needs_save
     end
-    
-    def unconfigured_default_for( column )
-      udf = @sampler.unconfigured_default_based_on_validations column
-      udf || case column.type
-        when :binary, :string, :text
-          unconfigured_default_for_text(column)
-        when :boolean
-          true
-        when :date
-          Date.today
-        when :datetime
-          Time.now.utc
-        when :float
-          1.0
-        when :integer
-          if assoc = @sampler.belongs_to_assoc_for( column )
-            assoc_class = Module.const_get assoc.class_name
-            SampleModels.samplers[assoc_class].default_creation.instance.id
-          else
-            1
-          end
-        else
-          raise "No default value for type #{ column.type.inspect }"
-      end
-    end
   end
   
   class CustomCreation < Creation
     def initialize(sampler, custom_attrs = {})
       super sampler
       @custom_attrs = custom_attrs
-    end
-    
-    def run
-      @instance = find_or_create
     end
     
     def each_updateable_association
@@ -221,12 +217,8 @@ module SampleModels
       end
     end
     
-    def unconfigured_default_for_text(column)
-      if @sampler.model_validates_uniqueness_of?(column.name)
-        SampleModels.random_word
-      else
-        "Test #{ column.name }"
-      end
+    def run
+      @instance = find_or_create
     end
   end
   
@@ -262,10 +254,6 @@ module SampleModels
     def set_default
       @sampler.default_instance =
           @sampler.create_default_instance_from_proc || find_or_create
-    end
-    
-    def unconfigured_default_for_text(column)
-      "Test #{ column.name }"
     end
   end
   
