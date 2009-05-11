@@ -44,6 +44,10 @@ silence_stream(STDOUT) do
       show.string  'name'
       show.integer 'network_id'
     end
+    
+    create_table 'this_or_thats', :force => true do |this_or_that|
+      this_or_that.integer 'show_id', 'network_id'
+    end
 
     create_table 'users', :force => true do |user|
       user.date    'birthday'
@@ -100,6 +104,17 @@ class Show < ActiveRecord::Base
   belongs_to :network
 end
 
+class ThisOrThat < ActiveRecord::Base
+  belongs_to :show
+  belongs_to :network
+  
+  def validate
+    if show_id.nil? && network_id.nil?
+      errors.add "show_id or network_id is required"
+    end
+  end
+end
+
 class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
@@ -135,6 +150,8 @@ SampleModels.default_instance Comment do
     :user => User.default_sample
   )
 end
+
+SampleModels.configure ThisOrThat, :force_on_create => :show
 
 SampleModels.configure User do |u|
   u.creation_note { "Started at #{ Time.now.to_s }" }
@@ -352,3 +369,10 @@ describe 'Model configuration with a bad field name' do
   end
 end
 
+describe 'Model with :force_on_create' do
+  it 'should create with that association, instead of creating without and then updating after' do
+    this_or_that = ThisOrThat.default_sample
+    this_or_that.network.should_not be_nil
+    this_or_that.show.should_not be_nil
+  end
+end

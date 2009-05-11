@@ -14,8 +14,12 @@ module SampleModels
     )
   }
 
-  def self.configure( model_class )
-    yield ConfigureRecipient.new( model_class )
+  def self.configure(model_class, opts ={})
+    if foc = opts[:force_on_create]
+      foc = [foc].compact unless foc.is_a?(Array)
+      SampleModels.samplers[model_class].force_on_create = foc
+    end
+    yield ConfigureRecipient.new(model_class) if block_given?
   end
     
   def self.default_instance( model_class, &block )
@@ -79,6 +83,10 @@ module SampleModels
           value = value.call
         end
         @attributes[name] = value unless @attributes.has_key?(name)
+      end
+      sampler.force_on_create.each do |assoc_name|
+        assoc = sampler.belongs_to_assoc_for assoc_name
+        @attributes[assoc_name] = assoc.klass.default_sample
       end
     end
     
@@ -311,13 +319,15 @@ module SampleModels
   end
   
   class Sampler
-    attr_reader :configured_default_attrs, :model_class, :validations
-    attr_writer :default_instance, :default_instance_proc
+    attr_accessor :force_on_create
+    attr_reader   :configured_default_attrs, :model_class, :validations
+    attr_writer   :default_instance, :default_instance_proc
     
     def initialize(model_class, configured_default_attrs)
       @model_class, @configured_default_attrs =
           model_class, configured_default_attrs
       @validations = Hash.new { |h, field| h[field] = [] }
+      @force_on_create = []
     end
     
     def belongs_to_assoc_for( column_or_name )
