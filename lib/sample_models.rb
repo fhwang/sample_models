@@ -172,7 +172,8 @@ module SampleModels
   
     def method_missing( meth, *args )
       if @model_class.column_names.include?( meth.to_s ) or
-         SampleModels.samplers[@model_class].belongs_to_assoc_for(meth)
+         SampleModels.samplers[@model_class].belongs_to_assoc_for(meth) or
+         @model_class.public_method_defined?("#{meth}=")
         default = if args.size == 1
           args.first
         else

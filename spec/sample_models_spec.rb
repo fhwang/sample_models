@@ -108,6 +108,8 @@ class ThisOrThat < ActiveRecord::Base
   belongs_to :show
   belongs_to :network
   
+  attr_accessor :or_the_other
+  
   def validate
     if show_id.nil? && network_id.nil?
       errors.add "show_id or network_id is required"
@@ -151,7 +153,9 @@ SampleModels.default_instance Comment do
   )
 end
 
-SampleModels.configure ThisOrThat, :force_on_create => :show
+SampleModels.configure ThisOrThat, :force_on_create => :show do |this_or_that|
+  this_or_that.or_the_other 'something else'
+end
 
 SampleModels.configure User do |u|
   u.creation_note { "Started at #{ Time.now.to_s }" }
@@ -379,5 +383,16 @@ describe 'Model with :force_on_create' do
   it 'should allow a custom sample for the forced assoc' do
     this_or_that = ThisOrThat.custom_sample :show => Show.custom_sample
     this_or_that.show.should_not == Show.default_sample
+  end
+end
+
+describe 'Model with an attr_accessor' do
+  it 'should returned the default configured value' do
+    ThisOrThat.default_sample.or_the_other.should == 'something else'
+  end
+  
+  it 'should override for a custom sample' do
+    custom = ThisOrThat.custom_sample :or_the_other => 'hello world'
+    custom.or_the_other.should == 'hello world'
   end
 end
