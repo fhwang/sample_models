@@ -86,7 +86,7 @@ module SampleModels
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
-        @attributes[assoc_name] = assoc.klass.default_sample
+        @attributes[assoc_name] ||= assoc.klass.default_sample
       end
     end
     

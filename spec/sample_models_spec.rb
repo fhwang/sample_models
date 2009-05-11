@@ -375,4 +375,9 @@ describe 'Model with :force_on_create' do
     this_or_that.network.should_not be_nil
     this_or_that.show.should_not be_nil
   end
+  
+  it 'should allow a custom sample for the forced assoc' do
+    this_or_that = ThisOrThat.custom_sample :show => Show.custom_sample
+    this_or_that.show.should_not == Show.default_sample
+  end
 end
