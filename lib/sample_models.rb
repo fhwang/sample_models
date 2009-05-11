@@ -42,23 +42,12 @@ module SampleModels
       @attributes = {}
       super @attributes
       @proxied_associations = {}
-      @model_class.columns_hash.each do |name, column|
-        build_default_attr_or_proxied_association name, column
-      end
-      custom_attrs ||= {}
-      custom_attrs.each do |field_name, value|
-        if value.is_a?(Hash) &&
-           assoc = sampler.belongs_to_assoc_for(field_name)
-          assoc_class = Module.const_get assoc.class_name
-          sampler = SampleModels.samplers[assoc_class]
-          @attributes[field_name] = sampler.custom_sample value
-        else
-          @attributes[field_name] = value
-        end
-      end
+      build_from_custom_attrs custom_attrs
+      build_from_configured_defaults
+      build_from_inferred_defaults
     end
     
-    def build_default_attr_or_proxied_association(name, column)
+    def build_attribute_or_proxied_association(name, column)
       proxied_association = false
       if assoc = sampler.belongs_to_assoc_for( column )
         unless sampler.model_validates_presence_of?(column.name)
@@ -79,6 +68,45 @@ module SampleModels
         end
         @attributes[name.to_sym] = default_att_value
       end
+    end
+    
+    def build_from_configured_defaults
+      sampler.configured_default_attrs.each do |name, value|
+        if assoc = sampler.belongs_to_assoc_for(name)
+          name = assoc.primary_key_name.to_sym
+          value = value.id unless value.nil?
+        elsif value.is_a?(Proc)
+          value = value.call
+        end
+        @attributes[name] = value unless @attributes.has_key?(name)
+      end
+    end
+    
+    def build_from_inferred_defaults
+      @model_class.columns_hash.each do |name, column|
+        unless name == 'id' or has_value_or_proxied_association?(name)
+          build_attribute_or_proxied_association name, column
+        end
+      end
+    end
+    
+    def build_from_custom_attrs(custom_attrs)
+      custom_attrs ||= {}
+      custom_attrs.each do |field_name, value|
+        if value.is_a?(Hash) &&
+           assoc = sampler.belongs_to_assoc_for(field_name)
+          assoc_class = Module.const_get assoc.class_name
+          sampler = SampleModels.samplers[assoc_class]
+          @attributes[field_name] = sampler.custom_sample value
+        else
+          @attributes[field_name] = value
+        end
+      end
+    end
+    
+    def has_value_or_proxied_association?(key)
+      @attributes.has_key?(key.to_sym) ||
+          @proxied_associations.has_key?(key.to_sym)
     end
     
     def sampler
@@ -135,7 +163,8 @@ module SampleModels
     end
   
     def method_missing( meth, *args )
-      if @model_class.column_names.include?( meth.to_s )
+      if @model_class.column_names.include?( meth.to_s ) or
+         SampleModels.samplers[@model_class].belongs_to_assoc_for(meth)
         default = if args.size == 1
           args.first
         else
@@ -143,7 +172,9 @@ module SampleModels
         end
         SampleModels.configured_defaults[@model_class][meth] = default
       else
-        super
+        raise(
+          NoMethodError, "undefined method `#{meth}' for #{@model_class.name}"
+        )
       end
     end
   end
@@ -238,7 +269,8 @@ module SampleModels
           recreated_associations = false
           unless assoc.class_name == model_class.name
             assoc_class = Module.const_get assoc.class_name
-            unless assoc_class.find_by_id(ds.send(assoc.name))
+            if ds.send(assoc.primary_key_name) &&
+               !assoc_class.find_by_id(ds.send(assoc.name))
               ds.send(
                 "#{assoc.name}=", 
                 SampleModels.samplers[assoc_class].default_creation.instance

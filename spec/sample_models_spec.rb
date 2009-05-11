@@ -21,7 +21,10 @@ silence_stream(STDOUT) do
     create_table 'blog_posts', :force => true do |blog_post|
       blog_post.integer 'user_id'
       blog_post.string  'title'
-      blog_post.integer 'merged_into_id'
+      blog_post.integer 'merged_into_id', 'category_id'
+    end
+    
+    create_table 'categories', :force => true do |category|
     end
     
     create_table 'comments', :force => true do |comment|
@@ -63,11 +66,15 @@ class BadSample < ActiveRecord::Base
 end
 
 class BlogPost < ActiveRecord::Base
+  belongs_to :category
   belongs_to :merged_into,
              :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
   
   validates_presence_of :user_id
+end
+
+class Category < ActiveRecord::Base
 end
 
 class Comment < ActiveRecord::Base
@@ -116,6 +123,10 @@ end
 # SampleModel configuration
 SampleModels.configure BadSample do |b|
   b.title ''
+end
+
+SampleModels.configure BlogPost do |bp|
+  bp.category nil
 end
 
 SampleModels.default_instance Comment do
@@ -243,6 +254,15 @@ describe 'Model with a belongs_to association' do
     show.network.should_not == Network.default_sample
     show.network.name.should == 'Comedy Central'
   end
+  
+  it 'should be able to configure an association as nil by default' do
+    ds = BlogPost.default_sample
+    ds.category.should be_nil
+    ds.category_id.should be_nil
+    reloaded_ds = BlogPost.default_sample
+    reloaded_ds.category.should be_nil
+    reloaded_ds.category_id.should be_nil
+  end
 end
 
 describe 'Model with a belongs_to association of the same class' do
@@ -317,6 +337,18 @@ describe 'Model with a unique value' do
       logins[custom.login].should be_nil
       logins[custom.login] = true
     end
+  end
+end
+
+describe 'Model configuration with a bad field name' do
+  it 'should raise a useful error message' do
+    lambda {
+      SampleModels.configure BadSample do |b|
+        b.foobar ''
+      end
+    }.should raise_error(
+      NoMethodError, /undefined method `foobar' for BadSample/
+    )
   end
 end
 
