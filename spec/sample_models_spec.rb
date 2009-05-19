@@ -30,6 +30,7 @@ silence_stream(STDOUT) do
     create_table 'comments', :force => true do |comment|
       comment.integer 'blog_post_id', 'user_id'
       comment.text    'comment'
+      comment.boolean 'flagged_as_spam', :default => false
     end
     
     create_table 'episodes', :force => true do |episode|
@@ -211,6 +212,10 @@ describe "Model.sample" do
   it 'should set emails based on a validation' do
     user = User.sample
     user.email.should match(/^.*@.*\..*/)
+  end
+  
+  it 'should not override a boolean default' do
+    Comment.sample.flagged_as_spam.should be_false
   end
 end
 

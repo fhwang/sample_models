@@ -52,15 +52,15 @@ module SampleModels
         end
       end
       unless proxied_association
-        default_att_value = nil
         if sampler.configured_default_attrs.key? name.to_sym
           cd = sampler.configured_default_attrs[name.to_sym]
           cd = cd.call if cd.is_a?( Proc )
-          default_att_value = cd
+          @attributes[name.to_sym] = cd
         else
-          default_att_value = unconfigured_default_for column
+          unless column.type == :boolean
+            @attributes[name.to_sym] = unconfigured_default_for column
+          end
         end
-        @attributes[name.to_sym] = default_att_value
       end
     end
     
@@ -118,8 +118,6 @@ module SampleModels
       udf || case column.type
         when :binary, :string, :text
           unconfigured_default_for_text(column)
-        when :boolean
-          true
         when :date
           Date.today
         when :datetime
