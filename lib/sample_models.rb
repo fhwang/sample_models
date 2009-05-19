@@ -166,6 +166,10 @@ module SampleModels
       block_given? ? yield(@default_recipient) : @default_recipient
     end
     
+    def default_to_nil(*fields)
+      fields.each do |field| self.default.send(field, nil); end
+    end
+    
     def force_on_create(foc)
       foc = [foc].compact unless foc.is_a?(Array)
       sampler.force_on_create = foc

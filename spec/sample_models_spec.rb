@@ -54,7 +54,7 @@ silence_stream(STDOUT) do
       user.date    'birthday'
       user.float   'avg_rating'
       user.string  'login', 'password', 'homepage', 'creation_note', 'gender',
-                   'email'
+                   'email', 'first_name', 'last_name'
       user.text    'bio', 'irc_nick'
       user.integer 'favorite_blog_post_id'
     end
@@ -155,9 +155,10 @@ end
 SampleModels.configure User do |u|
   u.default do |default|
     default.creation_note { "Started at #{ Time.now.to_s }" }
-    default.irc_nick      nil
     default.homepage      'http://www.test.com/'
+    default.irc_nick      nil
   end
+  u.default_to_nil :first_name, :last_name
 end
 
 SampleModels.configure Video do |video|
@@ -290,6 +291,8 @@ describe 'Model with a nil default value' do
   it 'should set that value in sample' do
     @user = User.sample
     @user.irc_nick.should be_nil
+    @user.first_name.should be_nil
+    @user.last_name.should be_nil
   end
 end
 
