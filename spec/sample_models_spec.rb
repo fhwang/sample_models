@@ -37,6 +37,10 @@ silence_stream(STDOUT) do
       episode.string  'name'
     end
     
+    create_table 'force_network_on_creates', :force => true do |video|
+      video.integer 'show_id', 'network_id'
+    end
+    
     create_table 'networks', :force => true do |network|
       network.string 'name'
     end
@@ -60,7 +64,7 @@ silence_stream(STDOUT) do
     end
     
     create_table 'videos', :force => true do |video|
-      video.integer 'show_id', 'episode_id'
+      video.integer 'show_id', 'episode_id', 'network_id'
     end
   end
 end
@@ -96,6 +100,11 @@ class Episode < ActiveRecord::Base
   validates_presence_of :show_id
 end
 
+class ForceNetworkOnCreate < ActiveRecord::Base
+  belongs_to :network
+  belongs_to :show
+end
+
 class Network < ActiveRecord::Base
 end
 
@@ -129,6 +138,7 @@ end
 
 class Video < ActiveRecord::Base
   belongs_to :show
+  belongs_to :network
   belongs_to :episode
   
   def validate
@@ -145,6 +155,10 @@ end
 
 SampleModels.configure BlogPost do |bp|
   bp.default.category nil
+end
+
+SampleModels.configure ForceNetworkOnCreate do |force|
+  force.force_on_create :network
 end
 
 SampleModels.configure ThisOrThat do |this_or_that|
@@ -265,7 +279,17 @@ describe 'Model with a belongs_to association of the same class' do
     @blog_post.merged_into.should be_nil
   end
 end
-  
+
+describe 'Model with a triangular belongs-to association' do
+  it 'should set unspecified association values to the same default instance' do
+    video = Video.sample :show => {:name => 'House'}, :episode => nil
+    video.show.name.should == 'House'
+    video.show.network.should_not be_nil
+    video.network.should_not be_nil
+    video.show.network.should == video.network
+  end
+end
+
 describe 'Model with a block for a default field' do
   it 'should evaluate the block every time custom_sample is called' do
     user1 = User.sample
@@ -303,7 +327,7 @@ describe 'Model with a redundant but validated association' do
     Video.sample
   end
   
-  it 'should connect associations to the same instances by default' do
+  it 'should use before_save to reconcile instance issues' do
     video = Video.sample :episode => {:name => 'The one about the parents'}
     video.episode.show.should == video.show
   end
@@ -344,6 +368,14 @@ describe 'Model with :force_on_create' do
     this_or_that = ThisOrThat.sample :show => show
     this_or_that.show.should == show
   end
+  
+  it "should choose the same instance for the forced association even if other associations are customized" do
+    forced = ForceNetworkOnCreate.sample(
+      :show => {:name => 'Arrested Development'}
+    )
+    forced.network.should_not be_nil
+    forced.network.should == forced.show.network
+  end
 end
 
 describe 'Model with an attr_accessor' do
@@ -356,3 +388,4 @@ describe 'Model with an attr_accessor' do
     custom.or_the_other.should == 'hello world'
   end
 end
+
