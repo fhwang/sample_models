@@ -139,21 +139,24 @@ end
 
 # SampleModel configuration
 SampleModels.configure BadSample do |b|
-  b.title ''
+  b.default.title ''
 end
 
 SampleModels.configure BlogPost do |bp|
-  bp.category nil
+  bp.default.category nil
 end
 
-SampleModels.configure ThisOrThat, :force_on_create => :show do |this_or_that|
-  this_or_that.or_the_other 'something else'
+SampleModels.configure ThisOrThat do |this_or_that|
+  this_or_that.default.or_the_other 'something else'
+  this_or_that.force_on_create :show
 end
 
 SampleModels.configure User do |u|
-  u.creation_note { "Started at #{ Time.now.to_s }" }
-  u.irc_nick      nil
-  u.homepage      'http://www.test.com/'
+  u.default do |default|
+    default.creation_note { "Started at #{ Time.now.to_s }" }
+    default.irc_nick      nil
+    default.homepage      'http://www.test.com/'
+  end
 end
 
 # Actual specs start here ...
@@ -308,7 +311,7 @@ describe 'Model configuration with a bad field name' do
   it 'should raise a useful error message' do
     lambda {
       SampleModels.configure BadSample do |b|
-        b.foobar ''
+        b.default.foobar ''
       end
     }.should raise_error(
       NoMethodError, /undefined method `foobar' for BadSample/

@@ -13,10 +13,6 @@ module SampleModels
   }
 
   def self.configure(model_class, opts ={})
-    if foc = opts[:force_on_create]
-      foc = [foc].compact unless foc.is_a?(Array)
-      SampleModels.samplers[model_class].force_on_create = foc
-    end
     yield ConfigureRecipient.new(model_class) if block_given?
   end
   
@@ -158,22 +154,38 @@ module SampleModels
   class ConfigureRecipient
     def initialize( model_class )
       @model_class = model_class
+      @default_recipient = Default.new @model_class
     end
-  
-    def method_missing( meth, *args )
-      if @model_class.column_names.include?( meth.to_s ) or
-         SampleModels.samplers[@model_class].belongs_to_assoc_for(meth) or
-         @model_class.public_method_defined?("#{meth}=")
-        default = if args.size == 1
-          args.first
+    
+    def default
+      block_given? ? yield(@default_recipient) : @default_recipient
+    end
+    
+    def force_on_create(foc)
+      foc = [foc].compact unless foc.is_a?(Array)
+      SampleModels.samplers[@model_class].force_on_create = foc
+    end
+    
+    class Default
+      def initialize( model_class )
+        @model_class = model_class
+      end
+      
+      def method_missing( meth, *args )
+        if @model_class.column_names.include?( meth.to_s ) or
+           SampleModels.samplers[@model_class].belongs_to_assoc_for(meth) or
+           @model_class.public_method_defined?("#{meth}=")
+          default = if args.size == 1
+            args.first
+          else
+            Proc.new do; yield; end
+          end
+          SampleModels.configured_defaults[@model_class][meth] = default
         else
-          Proc.new do; yield; end
+          raise(
+            NoMethodError, "undefined method `#{meth}' for #{@model_class.name}"
+          )
         end
-        SampleModels.configured_defaults[@model_class][meth] = default
-      else
-        raise(
-          NoMethodError, "undefined method `#{meth}' for #{@model_class.name}"
-        )
       end
     end
   end
