@@ -5,8 +5,6 @@ require 'delegate'
 module SampleModels
   mattr_accessor :configured_defaults
   self.configured_defaults = Hash.new { |h,k| h[k] = {} }
-  mattr_accessor :default_samples
-  self.default_samples = {}
   mattr_reader   :samplers
   @@samplers = Hash.new { |h, model_class|
     h[model_class] = Sampler.new(
@@ -20,10 +18,6 @@ module SampleModels
       SampleModels.samplers[model_class].force_on_create = foc
     end
     yield ConfigureRecipient.new(model_class) if block_given?
-  end
-    
-  def self.default_instance( model_class, &block )
-    samplers[model_class].default_instance_proc = Proc.new { block.call }
   end
   
   def self.random_word(length = 20)
@@ -86,7 +80,7 @@ module SampleModels
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
-        @attributes[assoc_name] ||= assoc.klass.default_sample
+        @attributes[assoc_name] ||= assoc.klass.sample
       end
     end
     
@@ -105,7 +99,7 @@ module SampleModels
            assoc = sampler.belongs_to_assoc_for(field_name)
           assoc_class = Module.const_get assoc.class_name
           sampler = SampleModels.samplers[assoc_class]
-          @attributes[field_name] = sampler.custom_sample value
+          @attributes[field_name] = sampler.sample value
         else
           @attributes[field_name] = value
         end
@@ -156,12 +150,8 @@ module SampleModels
   end
   
   module ARClassMethods
-    def custom_sample( custom_attrs = {} )
-      SampleModels.samplers[self].custom_sample custom_attrs
-    end
-    
-    def default_sample
-      SampleModels.samplers[self].default_sample
+    def sample( custom_attrs = {} )
+      SampleModels.samplers[self].sample custom_attrs
     end
   end
   
@@ -296,8 +286,7 @@ module SampleModels
     end
     
     def set_default
-      @sampler.default_instance =
-          @sampler.create_default_instance_from_proc || find_or_create
+      @sampler.default_instance = find_or_create
     end
   end
   
@@ -322,7 +311,7 @@ module SampleModels
   class Sampler
     attr_accessor :force_on_create
     attr_reader   :configured_default_attrs, :model_class, :validations
-    attr_writer   :default_instance, :default_instance_proc
+    attr_writer   :default_instance
     
     def initialize(model_class, configured_default_attrs)
       @model_class, @configured_default_attrs =
@@ -353,11 +342,7 @@ module SampleModels
       @default_creation = nil
     end
     
-    def create_default_instance_from_proc
-      @default_instance_proc.call if @default_instance_proc
-    end
-    
-    def custom_sample(custom_attrs)
+    def sample(custom_attrs)
       SampleModels::CustomCreation.new(self, custom_attrs).run
     end
     
@@ -376,12 +361,7 @@ module SampleModels
         end
       end
     end
-    
-    def default_sample
-      SampleModels.samplers.values.each(&:clear_default_creation)
-      default_creation.run
-    end
-    
+
     def model_validates_presence_of?(column_name)
       validations[column_name.to_sym].any? { |args|
         args.first == :validates_presence_of
