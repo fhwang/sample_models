@@ -34,6 +34,7 @@ silence_stream(STDOUT) do
     
     create_table 'episodes', :force => true do |episode|
       episode.integer 'show_id'
+      episode.string  'name'
     end
     
     create_table 'networks', :force => true do |network|
@@ -157,6 +158,10 @@ SampleModels.configure User do |u|
     default.irc_nick      nil
     default.homepage      'http://www.test.com/'
   end
+end
+
+SampleModels.configure Video do |video|
+  video.before_save { |v| v.show ||= v.episode.show if v.episode }
 end
 
 # Actual specs start here ...
@@ -293,6 +298,11 @@ describe 'Model with a redundant but validated association' do
     Show.create! :name => 'something to take ID 1'
     Show.create! :name => 'Test name'
     Video.sample
+  end
+  
+  it 'should connect associations to the same instances by default' do
+    video = Video.sample :episode => {:name => 'The one about the parents'}
+    video.episode.show.should == video.show
   end
 end
 

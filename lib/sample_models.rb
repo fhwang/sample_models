@@ -68,6 +68,7 @@ module SampleModels
       sampler.configured_default_attrs.each do |name, value|
         if assoc = sampler.belongs_to_assoc_for(name)
           name = assoc.primary_key_name.to_sym
+          value = value.call if value.is_a?(Proc)
           value = value.id unless value.nil?
         elsif value.is_a?(Proc)
           value = value.call
@@ -157,13 +158,21 @@ module SampleModels
       @default_recipient = Default.new @model_class
     end
     
+    def before_save(&proc)
+      sampler.before_save = proc
+    end
+    
     def default
       block_given? ? yield(@default_recipient) : @default_recipient
     end
     
     def force_on_create(foc)
       foc = [foc].compact unless foc.is_a?(Array)
-      SampleModels.samplers[@model_class].force_on_create = foc
+      sampler.force_on_create = foc
+    end
+    
+    def sampler
+      SampleModels.samplers[@model_class]
     end
     
     class Default
@@ -201,7 +210,12 @@ module SampleModels
     
     def create!
       @instance = begin
-        model_class.create! @attributes
+        instance = model_class.new @attributes
+        if @sampler.before_save
+          @sampler.before_save.call instance
+        end
+        instance.save!
+        instance
       rescue ActiveRecord::RecordInvalid
         $!.to_s =~ /Validation failed: (.*)/
         raise "#{model_class.name} validation failed: #{$1}"
@@ -321,7 +335,7 @@ module SampleModels
   end
   
   class Sampler
-    attr_accessor :force_on_create
+    attr_accessor :before_save, :force_on_create
     attr_reader   :configured_default_attrs, :model_class, :validations
     attr_writer   :default_instance
     
