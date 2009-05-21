@@ -383,6 +383,7 @@ module SampleModels
     end
     
     def sample(custom_attrs, force_create = false)
+      force_create = true if !custom_attrs.empty?
       SampleModels::CustomCreation.new(self, custom_attrs, force_create).run
     end
     

@@ -368,6 +368,11 @@ describe 'Model with a unique value' do
     user.reload
     user.homepage.should == 'http://www.test.com/'
   end
+  
+  it 'should know to create a new sample if any other fields are passed in' do
+    user = User.sample :password => 'password'
+    user.login.should_not == 'Test login'
+  end
 end
 
 describe 'Model configuration with a bad field name' do
