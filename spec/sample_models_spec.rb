@@ -164,8 +164,14 @@ SampleModels.configure ForceNetworkOnCreate do |force|
 end
 
 SampleModels.configure ThisOrThat do |this_or_that|
+  this_or_that.before_save do |tot|
+    if tot.show.nil? and tot.network.nil?
+      tot.network = Network.sample
+    end
+  end
+  this_or_that.default.network      nil
   this_or_that.default.or_the_other 'something else'
-  this_or_that.force_on_create :show
+  this_or_that.force_on_create      :show
 end
 
 SampleModels.configure User do |u|
@@ -391,7 +397,7 @@ end
 describe 'Model with :force_on_create' do
   it 'should create with that association, instead of creating without and then updating after' do
     this_or_that = ThisOrThat.sample
-    this_or_that.network.should_not be_nil
+    this_or_that.network.should be_nil
     this_or_that.show.should_not be_nil
   end
   
@@ -401,6 +407,12 @@ describe 'Model with :force_on_create' do
     this_or_that.show.should == show
   end
   
+  it 'should work with before_save, associations, and foreign keys' do
+    this_or_that = ThisOrThat.sample :network => Network.sample, :show => nil
+    this_or_that.show.should be_nil
+    this_or_that.network.should_not be_nil
+  end
+
   it "should choose the same instance for the forced association even if other associations are customized" do
     forced = ForceNetworkOnCreate.sample(
       :show => {:name => 'Arrested Development'}
@@ -449,5 +461,15 @@ describe 'Model configured with .force_unique' do
   it 'should generated a new value for sample calls with custom attrs' do
     bp = BlogPost.sample :user => {:login => 'francis'}
     bp.title.should_not == 'Test title'
+  end
+end
+
+describe 'SampleModels::Attributes' do
+  it 'should work with before_save, associations, and foreign keys' do
+    attributes = SampleModels::Attributes.new(
+      ThisOrThat, false, :network => Network.sample, :show => nil
+    )
+    attributes.has_key?(:network_id).should be_false
+    attributes[:network].should_not be_nil
   end
 end

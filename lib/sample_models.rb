@@ -66,14 +66,17 @@ module SampleModels
     
     def build_from_configured_defaults
       sampler.configured_default_attrs.each do |name, value|
+        keys_to_check = [name]
         if assoc = sampler.belongs_to_assoc_for(name)
-          name = assoc.primary_key_name.to_sym
+          keys_to_check << assoc.primary_key_name.to_sym
           value = value.call if value.is_a?(Proc)
           value = value.id unless value.nil?
         elsif value.is_a?(Proc)
           value = value.call
         end
-        @attributes[name] = value unless @attributes.has_key?(name)
+        unless keys_to_check.any? { |key| @attributes.has_key?(key) }
+          @attributes[name] = value
+        end
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
@@ -109,7 +112,8 @@ module SampleModels
     
     def has_value_or_proxied_association?(key)
       @attributes.has_key?(key.to_sym) ||
-          @proxied_associations.has_key?(key.to_sym)
+          @proxied_associations.has_key?(key.to_sym) ||
+          ((assoc = sampler.belongs_to_assoc_for(key)) && @attributes.has_key?(assoc.name))
     end
     
     def sampler
@@ -370,15 +374,16 @@ module SampleModels
     end
     
     def belongs_to_assoc_for( column_or_name )
+      name_to_match = nil
       if column_or_name.is_a?(String) or column_or_name.is_a?(Symbol)
-        belongs_to_associations.detect { |a|
-          a.name.to_sym == column_or_name.to_sym
-        }
+        name_to_match = column_or_name.to_sym
       else
-        belongs_to_associations.detect { |a|
-          a.primary_key_name == column_or_name.name
-        }
+        name_to_match = column_or_name.name.to_sym
       end
+      belongs_to_associations.detect { |a|
+        a.name.to_sym == name_to_match ||
+        a.primary_key_name.to_sym == name_to_match
+      }
     end
     
     def belongs_to_associations
