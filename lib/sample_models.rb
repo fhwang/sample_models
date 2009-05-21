@@ -77,8 +77,11 @@ module SampleModels
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
-        @attributes[assoc_name] ||= 
-          SampleModels.samplers[assoc.klass].default_creation.instance
+        unless @attributes.has_key?(assoc_name) or
+               @attributes.has_key?(assoc.primary_key_name.to_sym)
+          @attributes[assoc_name] = 
+            SampleModels.samplers[assoc.klass].default_creation.instance
+        end
       end
     end
     

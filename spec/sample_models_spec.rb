@@ -408,6 +408,22 @@ describe 'Model with :force_on_create' do
     forced.network.should_not be_nil
     forced.network.should == forced.show.network
   end
+  
+  it 'should allow you to set that association to nil' do
+    forced = ForceNetworkOnCreate.sample :network => nil
+    forced.network.should be_nil
+  end
+  
+  it 'should let you customize the forced association' do
+    forced = ForceNetworkOnCreate.sample :network => {:name => 'VH1'}
+    forced.network.name.should == 'VH1'
+  end
+  
+  it 'should let you customize the forced association by ID' do
+    bravo = Network.sample :name => 'Bravo'
+    forced = ForceNetworkOnCreate.sample :network_id => bravo.id
+    forced.network.name.should == 'Bravo'
+  end
 end
 
 describe 'Model with an attr_accessor' do
