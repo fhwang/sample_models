@@ -327,6 +327,7 @@ end
 
 describe 'Model with a redundant but validated association' do
   it 'should create a valid sample when the 2nd-degree association already exists' do
+    Show.destroy_all
     Show.create! :name => 'something to take ID 1'
     Show.create! :name => 'Test name'
     Video.sample
@@ -339,13 +340,33 @@ describe 'Model with a redundant but validated association' do
 end
 
 describe 'Model with a unique value' do
-  it 'should create a random unique value for each custom_sample' do
+  it 'should create a random unique value each time you call create_sample' do
     logins = {}
     10.times do
-      custom = User.sample
+      custom = User.create_sample
       logins[custom.login].should be_nil
       logins[custom.login] = true
     end
+  end
+  
+  it 'should find the previously existing instance for repeated calls of .sample' do
+    user = User.sample
+    user_prime = User.sample
+    user.should == user_prime
+    user.login.should == user_prime.login
+  end
+  
+  it 'should find an existing record by unique fields and change other if necessary' do
+    User.destroy_all
+    user = User.create!(
+      :login => 'Test login', :homepage => 'http://www.google.com/',
+      :gender => 'f', :email => 'foo@bar.com'
+    )
+    user_prime = User.sample
+    user_prime.login.should == user.login
+    user_prime.homepage.should == 'http://www.test.com/'
+    user.reload
+    user.homepage.should == 'http://www.test.com/'
   end
 end
 

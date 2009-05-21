@@ -31,8 +31,8 @@ module SampleModels
   class Attributes < DelegateClass(Hash)
     attr_reader :proxied_associations
     
-    def initialize(model_class, default, custom_attrs)
-      @model_class, @default = model_class, default
+    def initialize(model_class, force_create, custom_attrs)
+      @model_class, @force_create = model_class, force_create
       @attributes = {}
       super @attributes
       @proxied_associations = {}
@@ -137,7 +137,7 @@ module SampleModels
     end
     
     def unconfigured_default_for_text(column)
-      if !@default and sampler.model_validates_uniqueness_of?(column.name)
+      if @force_create and sampler.model_validates_uniqueness_of?(column.name)
         SampleModels.random_word
       else
         "Test #{ column.name }"
@@ -146,8 +146,12 @@ module SampleModels
   end
   
   module ARClassMethods
-    def sample( custom_attrs = {} )
-      SampleModels.samplers[self].sample custom_attrs
+    def create_sample(attrs = {})
+      SampleModels.samplers[self].sample attrs, true
+    end
+    
+    def sample( attrs = {} )
+      SampleModels.samplers[self].sample attrs
     end
   end
   
@@ -233,14 +237,21 @@ module SampleModels
         @sampler.unique_attributes.each do |name|
           find_attributes[name] = @attributes[name]
         end
-        model_class.find(:first, :conditions => find_attributes)
+        if instance = model_class.find(:first, :conditions => find_attributes)
+          differences = @attributes.select { |k, v|
+            instance.send(k) != v
+          }
+          unless differences.empty?
+            differences.each do |k, v| instance.send("#{k}=", v); end
+            instance.save
+          end
+          instance
+        end
       end
     end
     
     def find_or_create
-      @attributes = Attributes.new(
-        model_class, self.is_a?(DefaultCreation), @custom_attrs
-      )
+      @attributes = Attributes.new model_class, @force_create, @custom_attrs
       find_by_unique_attributes || create!
     end
     
@@ -264,9 +275,9 @@ module SampleModels
   end
   
   class CustomCreation < Creation
-    def initialize(sampler, custom_attrs = {})
+    def initialize(sampler, custom_attrs, force_create)
       super sampler
-      @custom_attrs = custom_attrs
+      @custom_attrs, @force_create = custom_attrs, force_create
     end
     
     def each_updateable_association
@@ -371,8 +382,8 @@ module SampleModels
       @default_creation = nil
     end
     
-    def sample(custom_attrs)
-      SampleModels::CustomCreation.new(self, custom_attrs).run
+    def sample(custom_attrs, force_create = false)
+      SampleModels::CustomCreation.new(self, custom_attrs, force_create).run
     end
     
     def default_creation
