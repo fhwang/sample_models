@@ -156,6 +156,7 @@ end
 
 SampleModels.configure BlogPost do |bp|
   bp.default.category nil
+  bp.force_unique     :title
 end
 
 SampleModels.configure ForceNetworkOnCreate do |force|
@@ -420,3 +421,17 @@ describe 'Model with an attr_accessor' do
   end
 end
 
+describe 'Model configured with .force_unique' do
+  it 'should return the same instance when called twice with no custom attrs' do
+    bp1 = BlogPost.sample
+    bp1.title.should == 'Test title'
+    bp2 = BlogPost.sample
+    bp2.title.should == bp1.title
+    bp2.should == bp1
+  end
+  
+  it 'should generated a new value for sample calls with custom attrs' do
+    bp = BlogPost.sample :user => {:login => 'francis'}
+    bp.title.should_not == 'Test title'
+  end
+end

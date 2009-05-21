@@ -178,6 +178,11 @@ module SampleModels
       sampler.force_on_create = foc
     end
     
+    def force_unique(fu)
+      fu = [fu].compact unless fu.is_a?(Array)
+      sampler.force_unique = fu
+    end
+    
     def sampler
       SampleModels.samplers[@model_class]
     end
@@ -349,7 +354,7 @@ module SampleModels
   end
   
   class Sampler
-    attr_accessor :before_save, :force_on_create
+    attr_accessor :before_save, :force_on_create, :force_unique
     attr_reader   :configured_default_attrs, :model_class, :validations
     attr_writer   :default_instance
     
@@ -358,6 +363,7 @@ module SampleModels
           model_class, configured_default_attrs
       @validations = Hash.new { |h, field| h[field] = [] }
       @force_on_create = []
+      @force_unique = []
     end
     
     def belongs_to_assoc_for( column_or_name )
@@ -441,7 +447,8 @@ module SampleModels
           select { |name, args_array|
             args_array.any? { |args| args.first == :validates_uniqueness_of }
           }.
-          map { |name, args_array| name }
+          map { |name, args_array| name }.
+          concat(@force_unique)
     end
   end
 end
