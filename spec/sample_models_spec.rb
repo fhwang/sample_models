@@ -159,6 +159,10 @@ SampleModels.configure BlogPost do |bp|
   bp.force_unique     :title
 end
 
+SampleModels.configure Episode do |ep|
+  ep.force_unique :name
+end
+
 SampleModels.configure ForceNetworkOnCreate do |force|
   force.force_on_create :network
 end
@@ -473,3 +477,13 @@ describe 'SampleModels::Attributes' do
     attributes[:network].should_not be_nil
   end
 end
+
+describe "Model when its default associated record has been deleted" do
+  it 'should just create a new one' do
+    ep1 = Episode.sample :name => 'funny'
+    ep1.show.destroy
+    ep2 = Episode.sample :name => 'funnier'
+    ep2.show.should_not be_nil
+  end
+end
+

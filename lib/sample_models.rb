@@ -136,7 +136,7 @@ module SampleModels
         when :integer
           if assoc = sampler.belongs_to_assoc_for( column )
             assoc_class = Module.const_get assoc.class_name
-            SampleModels.samplers[assoc_class].default_creation.instance.id
+            SampleModels.samplers[assoc_class].default_creation.verified_instance.id
           else
             1
           end
@@ -341,6 +341,15 @@ module SampleModels
     
     def set_default
       @sampler.default_instance = find_or_create
+    end
+    
+    def verified_instance
+      begin
+        @instance && @instance.reload
+      rescue ActiveRecord::RecordNotFound
+        @instance = nil
+      end
+      instance
     end
   end
   
