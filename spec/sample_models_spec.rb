@@ -485,5 +485,12 @@ describe "Model when its default associated record has been deleted" do
     ep2 = Episode.sample :name => 'funnier'
     ep2.show.should_not be_nil
   end
+  
+  it "should just create a new one even if the association is not validated to be present" do
+    show1 = Show.sample :name => "Oh no you didn't"
+    show1.network.destroy
+    show2 = Show.sample :name => "Don't go there"
+    show2.network.should_not be_nil
+  end
 end
 

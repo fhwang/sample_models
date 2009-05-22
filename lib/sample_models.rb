@@ -367,7 +367,7 @@ module SampleModels
     end
     
     def instance
-      SampleModels.samplers[assoc_class].default_creation.instance
+      SampleModels.samplers[assoc_class].default_creation.verified_instance
     end
   end
   
