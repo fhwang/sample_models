@@ -89,8 +89,10 @@ module SampleModels
     end
     
     def build_from_inferred_defaults
+      uninferrable_columns = %w(id created_at created_on updated_at updated_on)
       @model_class.columns_hash.each do |name, column|
-        unless name == 'id' or has_value_or_proxied_association?(name)
+        unless uninferrable_columns.include?(name) or
+               has_value_or_proxied_association?(name)
           build_attribute_or_proxied_association name, column
         end
       end
