@@ -88,22 +88,13 @@ module SampleModels
     
     def build_inferred_attribute_or_proxied_association(column)
       name = column.name.to_sym
-      proxied_association = false
-      if assoc = sampler.belongs_to_assoc_for( column )
-        unless sampler.model_validates_presence_of?(column.name)
-          unless assoc.class_name == @model_class.name
-            @proxied_associations[name] = ProxiedAssociation.new(assoc)
-          end
-          proxied_association = true
-        end
-      end
-      unless proxied_association
-        inferred_default = InferredDefault.new(
-          @model_class, @force_create, column
-        )
-        if inferred_default.has_value?
-          @attributes[name] = inferred_default.value
-        end
+      inferred_default = InferredDefault.new(
+        @model_class, @force_create, column
+      )
+      if inferred_default.has_proxied_association?
+        @proxied_associations[name] = inferred_default.proxied_association
+      elsif inferred_default.has_value?
+        @attributes[name] = inferred_default.value
       end
     end
     
@@ -123,8 +114,26 @@ module SampleModels
             model_class, force_create, column
       end
       
+      def belongs_to_assoc
+        @belongs_to_assoc ||= sampler.belongs_to_assoc_for(@column)
+      end
+      
+      def has_belongs_to_assoc_without_validated_presence?
+        belongs_to_assoc && !sampler.model_validates_presence_of?(@column.name)
+      end
+      
+      def has_proxied_association?
+        has_belongs_to_assoc_without_validated_presence? &&
+            (belongs_to_assoc.class_name != @model_class.name)
+      end
+      
       def has_value?
-        @column.type != :boolean
+        !has_belongs_to_assoc_without_validated_presence? &&
+            @column.type != :boolean
+      end
+      
+      def proxied_association
+        ProxiedAssociation.new belongs_to_assoc
       end
       
       def sampler
