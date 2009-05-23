@@ -3,13 +3,9 @@ if RAILS_ENV == 'test' # no reason to run this code outside of test mode
 require 'delegate'
   
 module SampleModels
-  mattr_accessor :configured_defaults
-  self.configured_defaults = Hash.new { |h,k| h[k] = {} }
   mattr_reader   :samplers
   @@samplers = Hash.new { |h, model_class|
-    h[model_class] = Sampler.new(
-      model_class, configured_defaults[model_class]
-    )
+    h[model_class] = Sampler.new(model_class)
   }
 
   def self.configure(model_class, opts ={})
@@ -31,7 +27,7 @@ module SampleModels
   class Attributes < DelegateClass(Hash)
     attr_reader :proxied_associations
     
-    def initialize(model_class, force_create, custom_attrs)
+    def initialize(model_class, force_create, custom_attrs = {})
       @model_class, @force_create = model_class, force_create
       @attributes = {}
       super @attributes
@@ -41,65 +37,38 @@ module SampleModels
       build_from_inferred_defaults
     end
     
-    def build_attribute_or_proxied_association(name, column)
-      proxied_association = false
-      if assoc = sampler.belongs_to_assoc_for( column )
-        unless sampler.model_validates_presence_of?(column.name)
-          unless assoc.class_name == @model_class.name
-            @proxied_associations[name.to_sym] = ProxiedAssociation.new(assoc)
-          end
-          proxied_association = true
+    def assoc_already_set_in_attributes?(assoc)
+      @attributes.has_key?(assoc.name) or
+             @attributes.has_key?(assoc.primary_key_name.to_sym)
+    end
+    
+    def build_from_configured_default(name, value)
+      if assoc = sampler.belongs_to_assoc_for(name)
+        value = value.call if value.is_a?(Proc)
+        value = value.id unless value.nil?
+        unless assoc_already_set_in_attributes?(assoc)
+          @attributes[name] = value
         end
-      end
-      unless proxied_association
-        if sampler.configured_default_attrs.key? name.to_sym
-          cd = sampler.configured_default_attrs[name.to_sym]
-          cd = cd.call if cd.is_a?( Proc )
-          @attributes[name.to_sym] = cd
-        else
-          unless column.type == :boolean
-            @attributes[name.to_sym] = unconfigured_default_for column
-          end
-        end
+      else
+        value = value.call if value.is_a?(Proc)
+        @attributes[name] = value unless @attributes.has_key?(name)
       end
     end
     
     def build_from_configured_defaults
       sampler.configured_default_attrs.each do |name, value|
-        keys_to_check = [name]
-        if assoc = sampler.belongs_to_assoc_for(name)
-          keys_to_check << assoc.primary_key_name.to_sym
-          value = value.call if value.is_a?(Proc)
-          value = value.id unless value.nil?
-        elsif value.is_a?(Proc)
-          value = value.call
-        end
-        unless keys_to_check.any? { |key| @attributes.has_key?(key) }
-          @attributes[name] = value
-        end
+        build_from_configured_default name, value
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
-        unless @attributes.has_key?(assoc_name) or
-               @attributes.has_key?(assoc.primary_key_name.to_sym)
+        unless assoc_already_set_in_attributes?(assoc)
           @attributes[assoc_name] = 
             SampleModels.samplers[assoc.klass].default_creation.instance
         end
       end
     end
     
-    def build_from_inferred_defaults
-      uninferrable_columns = %w(id created_at created_on updated_at updated_on)
-      @model_class.columns_hash.each do |name, column|
-        unless uninferrable_columns.include?(name) or
-               has_value_or_proxied_association?(name)
-          build_attribute_or_proxied_association name, column
-        end
-      end
-    end
-    
     def build_from_custom_attrs(custom_attrs)
-      custom_attrs ||= {}
       custom_attrs.each do |field_name, value|
         if value.is_a?(Hash) &&
            assoc = sampler.belongs_to_assoc_for(field_name)
@@ -108,6 +77,40 @@ module SampleModels
           @attributes[field_name] = sampler.sample value
         else
           @attributes[field_name] = value
+        end
+      end
+    end
+    
+    def build_from_inferred_defaults
+      uninferrable_columns = %w(id created_at created_on updated_at updated_on)
+      @model_class.columns.each do |column|
+        unless uninferrable_columns.include?(column.name) or
+               has_value_or_proxied_association?(column.name)
+          build_inferred_attribute_or_proxied_association(column)
+        end
+      end
+    end
+    
+    def build_inferred_attribute_or_proxied_association(column)
+      name = column.name.to_sym
+      proxied_association = false
+      if assoc = sampler.belongs_to_assoc_for( column )
+        unless sampler.model_validates_presence_of?(column.name)
+          unless assoc.class_name == @model_class.name
+            @proxied_associations[name] = ProxiedAssociation.new(assoc)
+          end
+          proxied_association = true
+        end
+      end
+      unless proxied_association
+        if sampler.configured_default_attrs.key? name
+          cd = sampler.configured_default_attrs[name]
+          cd = cd.call if cd.is_a?( Proc )
+          @attributes[name] = cd
+        else
+          unless column.type == :boolean
+            @attributes[name] = unconfigured_default_for column
+          end
         end
       end
     end
@@ -203,26 +206,30 @@ module SampleModels
       
       def method_missing( meth, *args )
         if @model_class.column_names.include?( meth.to_s ) or
-           SampleModels.samplers[@model_class].belongs_to_assoc_for(meth) or
+           sampler.belongs_to_assoc_for(meth) or
            @model_class.public_method_defined?("#{meth}=")
           default = if args.size == 1
             args.first
           else
             Proc.new do; yield; end
           end
-          SampleModels.configured_defaults[@model_class][meth] = default
+          sampler.configured_default_attrs[meth] = default
         else
           raise(
             NoMethodError, "undefined method `#{meth}' for #{@model_class.name}"
           )
         end
       end
+      
+      def sampler
+        SampleModels.samplers[@model_class]
+      end
     end
   end
   
   class Creation
-    def initialize(sampler)
-      @sampler = sampler
+    def initialize(sampler, custom_attrs={})
+      @sampler, @custom_attrs = sampler, custom_attrs
     end
     
     def assoc_primary_key_name
@@ -290,8 +297,8 @@ module SampleModels
   
   class CustomCreation < Creation
     def initialize(sampler, custom_attrs, force_create)
-      super sampler
-      @custom_attrs, @force_create = custom_attrs, force_create
+      super sampler, custom_attrs
+      @force_create = force_create
     end
     
     def each_updateable_association
@@ -376,10 +383,10 @@ module SampleModels
     attr_reader   :configured_default_attrs, :model_class, :validations
     attr_writer   :default_instance
     
-    def initialize(model_class, configured_default_attrs)
-      @model_class, @configured_default_attrs =
-          model_class, configured_default_attrs
+    def initialize(model_class)
+      @model_class = model_class
       @validations = Hash.new { |h, field| h[field] = [] }
+      @configured_default_attrs = {}
       @force_on_create = []
       @force_unique = []
     end
