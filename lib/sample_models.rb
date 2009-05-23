@@ -38,7 +38,7 @@ module SampleModels
     end
     
     def build_from_configured_defaults
-      config_defaults = ConfiguredDefaults.new @model_class
+      config_defaults = ConfiguredDefaults.new sampler
       config_defaults.values.each do |name, value|
         unless has_value?(name) or has_proxied_association?(name)
           @attributes[name] = value 
@@ -47,13 +47,13 @@ module SampleModels
     end
     
     def build_from_custom_attrs(custom_attrs)
-      CustomAttributes.new(@model_class, custom_attrs).each do |name, value|
+      CustomAttributes.new(sampler, custom_attrs).each do |name, value|
         @attributes[name] = value
       end
     end
     
     def build_from_inferred_defaults
-      inf_defaults = InferredDefaults.new(@model_class, @force_create)
+      inf_defaults = InferredDefaults.new(sampler, @force_create)
       inf_defaults.proxied_associations.each do |name, proxied_association|
         unless has_proxied_association?(name)
           @proxied_associations[name] = proxied_association
@@ -80,21 +80,21 @@ module SampleModels
     class ConfiguredDefaults
       attr_reader :values
       
-      def initialize(model_class)
-        @model_class = model_class
+      def initialize(sampler)
+        @sampler = sampler
         @values = {}
-        sampler.configured_default_attrs.each do |name, value|
+        @sampler.configured_default_attrs.each do |name, value|
           build_from_configured_default name, value
         end
-        sampler.force_on_create.each do |assoc_name|
-          assoc = sampler.belongs_to_assoc_for assoc_name
+        @sampler.force_on_create.each do |assoc_name|
+          assoc = @sampler.belongs_to_assoc_for assoc_name
           @values[assoc_name] = 
             SampleModels.samplers[assoc.klass].default_creation.instance
         end
       end
     
       def build_from_configured_default(name, value)
-        if assoc = sampler.belongs_to_assoc_for(name)
+        if assoc = @sampler.belongs_to_assoc_for(name)
           value = value.call if value.is_a?(Proc)
           value = value.id unless value.nil?
           @values[name] = value
@@ -103,17 +103,12 @@ module SampleModels
           @values[name] = value
         end
       end
-    
-      def sampler
-        SampleModels.samplers[@model_class]
-      end
     end
     
     class CustomAttributes < DelegateClass(Hash)
-      def initialize(model_class, custom_attrs)
+      def initialize(sampler, custom_attrs)
         @values = {}
         super @values
-        sampler = SampleModels.samplers[model_class]
         custom_attrs.each do |field_name, value|
           if value.is_a?(Hash) &&
              assoc = sampler.belongs_to_assoc_for(field_name)
@@ -128,22 +123,23 @@ module SampleModels
     end
     
     class InferredDefault
-      def initialize(model_class, force_create, column)
-        @model_class, @force_create, @column =
-            model_class, force_create, column
+      def initialize(sampler, force_create, column)
+        @sampler, @force_create, @column =
+            sampler, force_create, column
       end
       
       def belongs_to_assoc
-        @belongs_to_assoc ||= sampler.belongs_to_assoc_for(@column)
+        @belongs_to_assoc ||= @sampler.belongs_to_assoc_for(@column)
       end
       
       def has_belongs_to_assoc_without_validated_presence?
-        belongs_to_assoc && !sampler.model_validates_presence_of?(@column.name)
+        belongs_to_assoc &&
+            !@sampler.model_validates_presence_of?(@column.name)
       end
       
       def has_proxied_association?
         has_belongs_to_assoc_without_validated_presence? &&
-            (belongs_to_assoc.class_name != @model_class.name)
+            (belongs_to_assoc.class_name != @sampler.model_class.name)
       end
       
       def has_value?
@@ -155,26 +151,22 @@ module SampleModels
         ProxiedAssociation.new belongs_to_assoc
       end
       
-      def sampler
-        SampleModels.samplers[@model_class]
-      end
-      
       def value
-        InferredDefaultValue.new(@model_class, @force_create, @column).value
+        InferredDefaultValue.new(@sampler, @force_create, @column).value
       end
     end
     
     class InferredDefaults
       attr_reader :proxied_associations, :values
       
-      def initialize(model_class, force_create)
-        @model_class, @force_create = model_class, force_create
+      def initialize(sampler, force_create)
+        @sampler, @force_create = sampler, force_create
         @proxied_associations = {}
         @values = {}
         uninferrable_columns = %w(
           id created_at created_on updated_at updated_on
         )
-        @model_class.columns.each do |column|
+        @sampler.model_class.columns.each do |column|
           unless uninferrable_columns.include?(column.name)
             build_inferred_attribute_or_proxied_association(column)
           end
@@ -183,9 +175,7 @@ module SampleModels
       
       def build_inferred_attribute_or_proxied_association(column)
         name = column.name.to_sym
-        inferred_default = InferredDefault.new(
-          @model_class, @force_create, column
-        )
+        inferred_default = InferredDefault.new @sampler, @force_create, column
         if inferred_default.has_proxied_association?
           @proxied_associations[name] = inferred_default.proxied_association
         elsif inferred_default.has_value?
@@ -195,16 +185,12 @@ module SampleModels
     end
     
     class InferredDefaultValue
-      def initialize(model_class, force_create, column)
-        @model_class, @force_create, @column = model_class, force_create, column
-      end
-      
-      def sampler
-        SampleModels.samplers[@model_class]
+      def initialize(sampler, force_create, column)
+        @sampler, @force_create, @column = sampler, force_create, column
       end
       
       def value
-        udf = sampler.unconfigured_default_based_on_validations @column
+        udf = @sampler.unconfigured_default_based_on_validations @column
         udf || case @column.type
           when :binary, :string, :text
             value_for_text
@@ -222,7 +208,7 @@ module SampleModels
       end
       
       def value_for_integer
-        if assoc = sampler.belongs_to_assoc_for( @column )
+        if assoc = @sampler.belongs_to_assoc_for( @column )
           assoc_class = Module.const_get assoc.class_name
           SampleModels.samplers[assoc_class].default_creation.verified_instance.id
         else
@@ -232,7 +218,7 @@ module SampleModels
       
       def value_for_text
         if @force_create and
-           sampler.model_validates_uniqueness_of?(@column.name)
+           @sampler.model_validates_uniqueness_of?(@column.name)
           SampleModels.random_word
         else
           "Test #{ @column.name }"
@@ -316,10 +302,6 @@ module SampleModels
       @sampler, @custom_attrs = sampler, custom_attrs
     end
     
-    def assoc_primary_key_name
-      @belongs_to_assoc.primary_key_name if @belongs_to_assoc
-    end
-    
     def create!
       @instance = begin
         instance = model_class.new @attributes
@@ -336,28 +318,9 @@ module SampleModels
       @instance
     end
     
-    def find_by_unique_attributes
-      unless @sampler.unique_attributes.empty?
-        find_attributes = {}
-        @sampler.unique_attributes.each do |name|
-          find_attributes[name] = @attributes[name]
-        end
-        if instance = model_class.find(:first, :conditions => find_attributes)
-          differences = @attributes.select { |k, v|
-            instance.send(k) != v
-          }
-          unless differences.empty?
-            differences.each do |k, v| instance.send("#{k}=", v); end
-            instance.save
-          end
-          instance
-        end
-      end
-    end
-    
     def find_or_create
       @attributes = Attributes.new model_class, @force_create, @custom_attrs
-      find_by_unique_attributes || create!
+      Finder.new(@sampler, @attributes).find || create!
     end
     
     def instance
@@ -376,6 +339,34 @@ module SampleModels
         @instance.send("#{name}=", proxied_association.instance.id)
       end
       @instance.save! if needs_save
+    end
+    
+    class Finder
+      def initialize(sampler, attributes)
+        @sampler, @attributes = sampler, attributes
+      end
+      
+      def find
+        unless @sampler.unique_attributes.empty?
+          find_attributes = {}
+          @sampler.unique_attributes.each do |name|
+            find_attributes[name] = @attributes[name]
+          end
+          @instance = @sampler.model_class.find(
+            :first, :conditions => find_attributes
+          )
+          update_existing_record if @instance
+        end
+        @instance
+      end
+    
+      def update_existing_record
+        differences = @attributes.select { |k, v| @instance.send(k) != v }
+        unless differences.empty?
+          differences.each do |k, v| @instance.send("#{k}=", v); end
+          @instance.save
+        end
+      end
     end
   end
   
@@ -407,23 +398,27 @@ module SampleModels
       end
     end
     
+    def check_assoc_on_default_instance(ds, assoc)
+      unless assoc.class_name == model_class.name
+        assoc_class = Module.const_get assoc.class_name
+        if ds.send(assoc.primary_key_name) &&
+           !assoc_class.find_by_id(ds.send(assoc.name))
+          ds.send(
+            "#{assoc.name}=", 
+            SampleModels.samplers[assoc_class].default_creation.instance
+          )
+          @recreated_associations = true
+        end
+      end
+    end
+    
     def run
       if ds = @sampler.default_instance
+        @recreated_associations = false
         @sampler.belongs_to_associations.each do |assoc|
-          recreated_associations = false
-          unless assoc.class_name == model_class.name
-            assoc_class = Module.const_get assoc.class_name
-            if ds.send(assoc.primary_key_name) &&
-               !assoc_class.find_by_id(ds.send(assoc.name))
-              ds.send(
-                "#{assoc.name}=", 
-                SampleModels.samplers[assoc_class].default_creation.instance
-              )
-              recreated_associations = true
-            end
-          end
-          ds.save! if recreated_associations
+          check_assoc_on_default_instance(ds, assoc)
         end
+        ds.save! if @recreated_associations
       else
         set_default
       end
