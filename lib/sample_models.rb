@@ -37,16 +37,11 @@ module SampleModels
       build_from_inferred_defaults
     end
     
-    def assoc_already_set_in_attributes?(assoc)
-      @attributes.has_key?(assoc.name) or
-             @attributes.has_key?(assoc.primary_key_name.to_sym)
-    end
-    
     def build_from_configured_default(name, value)
       if assoc = sampler.belongs_to_assoc_for(name)
         value = value.call if value.is_a?(Proc)
         value = value.id unless value.nil?
-        unless assoc_already_set_in_attributes?(assoc)
+        unless has_value_or_proxied_association?(name)
           @attributes[name] = value
         end
       else
@@ -61,7 +56,7 @@ module SampleModels
       end
       sampler.force_on_create.each do |assoc_name|
         assoc = sampler.belongs_to_assoc_for assoc_name
-        unless assoc_already_set_in_attributes?(assoc)
+        unless has_value_or_proxied_association?(assoc_name)
           @attributes[assoc_name] = 
             SampleModels.samplers[assoc.klass].default_creation.instance
         end
@@ -103,14 +98,11 @@ module SampleModels
         end
       end
       unless proxied_association
-        if sampler.configured_default_attrs.key? name
-          cd = sampler.configured_default_attrs[name]
-          cd = cd.call if cd.is_a?( Proc )
-          @attributes[name] = cd
-        else
-          unless column.type == :boolean
-            @attributes[name] = unconfigured_default_for column
-          end
+        inferred_default = InferredDefault.new(
+          @model_class, @force_create, column
+        )
+        if inferred_default.has_value?
+          @attributes[name] = inferred_default.value
         end
       end
     end
@@ -118,41 +110,61 @@ module SampleModels
     def has_value_or_proxied_association?(key)
       @attributes.has_key?(key.to_sym) ||
           @proxied_associations.has_key?(key.to_sym) ||
-          ((assoc = sampler.belongs_to_assoc_for(key)) && @attributes.has_key?(assoc.name))
+          ((assoc = sampler.belongs_to_assoc_for(key)) && (@attributes.has_key?(assoc.name) || @attributes.has_key?(assoc.primary_key_name.to_sym)))
     end
     
     def sampler
       SampleModels.samplers[@model_class]
     end
     
-    def unconfigured_default_for( column )
-      udf = sampler.unconfigured_default_based_on_validations column
-      udf || case column.type
-        when :binary, :string, :text
-          unconfigured_default_for_text(column)
-        when :date
-          Date.today
-        when :datetime
-          Time.now.utc
-        when :float
-          1.0
-        when :integer
-          if assoc = sampler.belongs_to_assoc_for( column )
-            assoc_class = Module.const_get assoc.class_name
-            SampleModels.samplers[assoc_class].default_creation.verified_instance.id
-          else
-            1
-          end
-        else
-          raise "No default value for type #{ column.type.inspect }"
+    class InferredDefault
+      def initialize(model_class, force_create, column)
+        @model_class, @force_create, @column =
+            model_class, force_create, column
       end
-    end
-    
-    def unconfigured_default_for_text(column)
-      if @force_create and sampler.model_validates_uniqueness_of?(column.name)
-        SampleModels.random_word
-      else
-        "Test #{ column.name }"
+      
+      def has_value?
+        @column.type != :boolean
+      end
+      
+      def sampler
+        SampleModels.samplers[@model_class]
+      end
+      
+      def value
+        udf = sampler.unconfigured_default_based_on_validations @column
+        udf || case @column.type
+          when :binary, :string, :text
+            value_for_text
+          when :date
+            Date.today
+          when :datetime
+            Time.now.utc
+          when :float
+            1.0
+          when :integer
+            value_for_integer
+          else
+            raise "No default value for type #{ @column.type.inspect }"
+        end
+      end
+      
+      def value_for_integer
+        if assoc = sampler.belongs_to_assoc_for( @column )
+          assoc_class = Module.const_get assoc.class_name
+          SampleModels.samplers[assoc_class].default_creation.verified_instance.id
+        else
+          1
+        end
+      end
+      
+      def value_for_text
+        if @force_create and
+           sampler.model_validates_uniqueness_of?(@column.name)
+          SampleModels.random_word
+        else
+          "Test #{ @column.name }"
+        end
       end
     end
   end
