@@ -37,42 +37,18 @@ module SampleModels
       build_from_inferred_defaults
     end
     
-    def build_from_configured_default(name, value)
-      if assoc = sampler.belongs_to_assoc_for(name)
-        value = value.call if value.is_a?(Proc)
-        value = value.id unless value.nil?
-        unless has_value?(name) or has_proxied_association?(name)
-          @attributes[name] = value
-        end
-      else
-        value = value.call if value.is_a?(Proc)
-        @attributes[name] = value unless @attributes.has_key?(name)
-      end
-    end
-    
     def build_from_configured_defaults
-      sampler.configured_default_attrs.each do |name, value|
-        build_from_configured_default name, value
-      end
-      sampler.force_on_create.each do |assoc_name|
-        assoc = sampler.belongs_to_assoc_for assoc_name
-        unless has_value?(assoc_name) or has_proxied_association?(assoc_name)
-          @attributes[assoc_name] = 
-            SampleModels.samplers[assoc.klass].default_creation.instance
+      config_defaults = ConfiguredDefaults.new @model_class
+      config_defaults.values.each do |name, value|
+        unless has_value?(name) or has_proxied_association?(name)
+          @attributes[name] = value 
         end
       end
     end
     
     def build_from_custom_attrs(custom_attrs)
-      custom_attrs.each do |field_name, value|
-        if value.is_a?(Hash) &&
-           assoc = sampler.belongs_to_assoc_for(field_name)
-          assoc_class = Module.const_get assoc.class_name
-          sampler = SampleModels.samplers[assoc_class]
-          @attributes[field_name] = sampler.sample value
-        else
-          @attributes[field_name] = value
-        end
+      CustomAttributes.new(@model_class, custom_attrs).each do |name, value|
+        @attributes[name] = value
       end
     end
     
@@ -84,9 +60,7 @@ module SampleModels
         end
       end
       inf_defaults.values.each do |name, value|
-        unless has_value?(name)
-          @attributes[name] = value
-        end
+        @attributes[name] = value unless has_value?(name)
       end
     end
     
@@ -101,6 +75,56 @@ module SampleModels
     
     def sampler
       SampleModels.samplers[@model_class]
+    end
+    
+    class ConfiguredDefaults
+      attr_reader :values
+      
+      def initialize(model_class)
+        @model_class = model_class
+        @values = {}
+        sampler.configured_default_attrs.each do |name, value|
+          build_from_configured_default name, value
+        end
+        sampler.force_on_create.each do |assoc_name|
+          assoc = sampler.belongs_to_assoc_for assoc_name
+          @values[assoc_name] = 
+            SampleModels.samplers[assoc.klass].default_creation.instance
+        end
+      end
+    
+      def build_from_configured_default(name, value)
+        if assoc = sampler.belongs_to_assoc_for(name)
+          value = value.call if value.is_a?(Proc)
+          value = value.id unless value.nil?
+          @values[name] = value
+        else
+          value = value.call if value.is_a?(Proc)
+          @values[name] = value
+        end
+      end
+    
+      def sampler
+        SampleModels.samplers[@model_class]
+      end
+    end
+    
+    class CustomAttributes < DelegateClass(Hash)
+      def initialize(model_class, custom_attrs)
+        @values = {}
+        super @values
+        sampler = SampleModels.samplers[model_class]
+        custom_attrs.each do |field_name, value|
+          if value.is_a?(Hash) &&
+             assoc = sampler.belongs_to_assoc_for(field_name)
+            assoc_class = Module.const_get assoc.class_name
+            sampler_for_assoc = SampleModels.samplers[assoc_class]
+            @values[field_name] = sampler_for_assoc.sample value
+          else
+            @values[field_name] = value
+          end
+        end
+      end
     end
     
     class InferredDefault
@@ -129,6 +153,50 @@ module SampleModels
       
       def proxied_association
         ProxiedAssociation.new belongs_to_assoc
+      end
+      
+      def sampler
+        SampleModels.samplers[@model_class]
+      end
+      
+      def value
+        InferredDefaultValue.new(@model_class, @force_create, @column).value
+      end
+    end
+    
+    class InferredDefaults
+      attr_reader :proxied_associations, :values
+      
+      def initialize(model_class, force_create)
+        @model_class, @force_create = model_class, force_create
+        @proxied_associations = {}
+        @values = {}
+        uninferrable_columns = %w(
+          id created_at created_on updated_at updated_on
+        )
+        @model_class.columns.each do |column|
+          unless uninferrable_columns.include?(column.name)
+            build_inferred_attribute_or_proxied_association(column)
+          end
+        end
+      end
+      
+      def build_inferred_attribute_or_proxied_association(column)
+        name = column.name.to_sym
+        inferred_default = InferredDefault.new(
+          @model_class, @force_create, column
+        )
+        if inferred_default.has_proxied_association?
+          @proxied_associations[name] = inferred_default.proxied_association
+        elsif inferred_default.has_value?
+          @values[name] = inferred_default.value
+        end
+      end
+    end
+    
+    class InferredDefaultValue
+      def initialize(model_class, force_create, column)
+        @model_class, @force_create, @column = model_class, force_create, column
       end
       
       def sampler
@@ -168,36 +236,6 @@ module SampleModels
           SampleModels.random_word
         else
           "Test #{ @column.name }"
-        end
-      end
-    end
-    
-    class InferredDefaults
-      attr_reader :proxied_associations, :values
-      
-      def initialize(model_class, force_create)
-        @model_class, @force_create = model_class, force_create
-        @proxied_associations = {}
-        @values = {}
-        uninferrable_columns = %w(
-          id created_at created_on updated_at updated_on
-        )
-        @model_class.columns.each do |column|
-          unless uninferrable_columns.include?(column.name)
-            build_inferred_attribute_or_proxied_association(column)
-          end
-        end
-      end
-      
-      def build_inferred_attribute_or_proxied_association(column)
-        name = column.name.to_sym
-        inferred_default = InferredDefault.new(
-          @model_class, @force_create, column
-        )
-        if inferred_default.has_proxied_association?
-          @proxied_associations[name] = inferred_default.proxied_association
-        elsif inferred_default.has_value?
-          @values[name] = inferred_default.value
         end
       end
     end
