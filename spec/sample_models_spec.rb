@@ -19,9 +19,9 @@ silence_stream(STDOUT) do
     end
     
     create_table 'blog_posts', :force => true do |blog_post|
-      blog_post.integer 'user_id'
+      blog_post.integer 'user_id', 'merged_into_id', 'category_id',
+                        'comments_count'
       blog_post.string  'title'
-      blog_post.integer 'merged_into_id', 'category_id'
     end
     
     create_table 'categories', :force => true do |category|
@@ -205,8 +205,8 @@ describe "Model.sample" do
     User.sample.homepage.should == 'http://www.test.com/'
   end
     
-  it 'should set floats to 1.0' do
-    User.sample.avg_rating.should == 1.0
+  it 'should set floats to 0.0' do
+    User.sample.avg_rating.should == 0.0
   end
 
   it "should set text fields by default starting with 'test '" do
@@ -227,6 +227,10 @@ describe "Model.sample" do
   
   it 'should not override a boolean default' do
     Comment.sample.flagged_as_spam.should be_false
+  end
+  
+  it 'should set integer fields to default 0' do
+    BlogPost.sample.comments_count.should == 0
   end
 end
 

@@ -199,7 +199,7 @@ module SampleModels
           when :datetime
             Time.now.utc
           when :float
-            1.0
+            0.0
           when :integer
             value_for_integer
           else
@@ -212,7 +212,7 @@ module SampleModels
           assoc_class = Module.const_get assoc.class_name
           SampleModels.samplers[assoc_class].default_creation.verified_instance.id
         else
-          1
+          0
         end
       end
       
