@@ -24,13 +24,12 @@ module SampleModels
     super
   end
   
-  class Attributes < DelegateClass(Hash)
-    attr_reader :proxied_associations
+  class Attributes
+    attr_reader :proxied_associations, :required
     
     def initialize(model_class, force_create, custom_attrs = {})
       @model_class, @force_create = model_class, force_create
-      @attributes = {}
-      super @attributes
+      @required = {}
       @proxied_associations = {}
       build_from_custom_attrs custom_attrs
       build_from_configured_defaults
@@ -41,14 +40,14 @@ module SampleModels
       config_defaults = ConfiguredDefaults.new sampler
       config_defaults.values.each do |name, value|
         unless has_value?(name) or has_proxied_association?(name)
-          @attributes[name] = value 
+          @required[name] = value 
         end
       end
     end
     
     def build_from_custom_attrs(custom_attrs)
       CustomAttributes.new(sampler, custom_attrs).each do |name, value|
-        @attributes[name] = value
+        @required[name] = value
       end
     end
     
@@ -60,17 +59,17 @@ module SampleModels
         end
       end
       inf_defaults.values.each do |name, value|
-        @attributes[name] = value unless has_value?(name)
+        @required[name] = value unless has_value?(name)
       end
     end
     
     def has_proxied_association?(key)
       @proxied_associations.has_key?(key.to_sym) ||
-          ((assoc = sampler.belongs_to_assoc_for(key)) && (@attributes.has_key?(assoc.name) || @attributes.has_key?(assoc.primary_key_name.to_sym)))
+          ((assoc = sampler.belongs_to_assoc_for(key)) && (@required.has_key?(assoc.name) || @required.has_key?(assoc.primary_key_name.to_sym)))
     end
     
     def has_value?(key)
-      @attributes.has_key?(key.to_sym)
+      @required.has_key?(key.to_sym)
     end
     
     def sampler
@@ -304,7 +303,7 @@ module SampleModels
     
     def create!
       @instance = begin
-        instance = model_class.new @attributes
+        instance = model_class.new @attributes.required
         if @sampler.before_save
           @sampler.before_save.call instance
         end
@@ -350,7 +349,7 @@ module SampleModels
         unless @sampler.unique_attributes.empty?
           find_attributes = {}
           @sampler.unique_attributes.each do |name|
-            find_attributes[name] = @attributes[name]
+            find_attributes[name] = @attributes.required[name]
           end
           @instance = @sampler.model_class.find(
             :first, :conditions => find_attributes
@@ -361,7 +360,9 @@ module SampleModels
       end
     
       def update_existing_record
-        differences = @attributes.select { |k, v| @instance.send(k) != v }
+        differences = @attributes.required.select { |k, v|
+          @instance.send(k) != v
+        }
         unless differences.empty?
           differences.each do |k, v| @instance.send("#{k}=", v); end
           @instance.save

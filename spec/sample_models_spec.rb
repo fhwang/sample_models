@@ -477,8 +477,8 @@ describe 'SampleModels::Attributes' do
     attributes = SampleModels::Attributes.new(
       ThisOrThat, false, :network => Network.sample, :show => nil
     )
-    attributes.has_key?(:network_id).should be_false
-    attributes[:network].should_not be_nil
+    attributes.required.has_key?(:network_id).should be_false
+    attributes.required[:network].should_not be_nil
   end
 end
 
