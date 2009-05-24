@@ -498,3 +498,21 @@ describe "Model when its default associated record has been deleted" do
   end
 end
 
+describe 'Model.sample when a instance already exists in the DB but has different attributes from the default' do
+  it 'should not update those different attributes' do
+    User.destroy_all
+    user1 = User.create!(
+      :birthday => Date.new(1960, 1, 1), :avg_rating => 99.99,
+      :login => 'Test login', :password => 'foobar', :gender => 'f',
+      :email => 'joebob@email.com', :bio => "here's my bio"
+    )
+    user2 = User.sample
+    user1.id.should == user2.id
+    user2.birthday.should == Date.new(1960, 1, 1)
+    user2.avg_rating.should == 99.99
+    user2.password.should == 'foobar'
+    user2.gender.should == 'f'
+    user2.email.should == 'joebob@email.com'
+    user2.bio.should == "here's my bio"
+  end
+end

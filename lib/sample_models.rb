@@ -25,11 +25,12 @@ module SampleModels
   end
   
   class Attributes
-    attr_reader :proxied_associations, :required
+    attr_reader :proxied_associations, :required, :suggested
     
     def initialize(model_class, force_create, custom_attrs = {})
       @model_class, @force_create = model_class, force_create
       @required = {}
+      @suggested = {}
       @proxied_associations = {}
       build_from_custom_attrs custom_attrs
       build_from_configured_defaults
@@ -59,7 +60,7 @@ module SampleModels
         end
       end
       inf_defaults.values.each do |name, value|
-        @required[name] = value unless has_value?(name)
+        @suggested[name] = value unless has_value?(name)
       end
     end
     
@@ -303,7 +304,9 @@ module SampleModels
     
     def create!
       @instance = begin
-        instance = model_class.new @attributes.required
+        instance = model_class.new(
+          @attributes.suggested.merge(@attributes.required)
+        )
         if @sampler.before_save
           @sampler.before_save.call instance
         end
@@ -349,7 +352,8 @@ module SampleModels
         unless @sampler.unique_attributes.empty?
           find_attributes = {}
           @sampler.unique_attributes.each do |name|
-            find_attributes[name] = @attributes.required[name]
+            find_attributes[name] =
+                @attributes.required[name] || @attributes.suggested[name]
           end
           @instance = @sampler.model_class.find(
             :first, :conditions => find_attributes
