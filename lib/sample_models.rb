@@ -475,12 +475,12 @@ module SampleModels
   
   class Sampler
     attr_accessor :before_save, :force_on_create, :force_unique
-    attr_reader   :configured_default_attrs, :model_class, :validations
+    attr_reader   :configured_default_attrs, :model_class
     attr_writer   :default_instance
     
     def initialize(model_class)
       @model_class = model_class
-      @validations = Hash.new { |h, field| h[field] = [] }
+      @validations_hash = Hash.new { |h, field| h[field] = [] }
       @configured_default_attrs = {}
       @force_on_create = []
       @force_unique = []
@@ -531,24 +531,17 @@ module SampleModels
     end
     
     def missing_fields_from_conditional_validated_presences(instance)
-      validations.select { |column_name, args_array|
-        args_array.any? { |args|
-          args.first == :validates_presence_of && args[2] &&
-          (
-            (args[2][:if] && instance.send(args[2][:if])) ||
-            (args[2][:unless] && !instance.send(args[2][:unless]))
-           )
+      @validations_hash.select { |column_name, validations|
+        validations.any? { |validation|
+          validation.presence? && validation.conditional? && validation.should_be_applied?(instance)
         }
-      }.map { |column_name, *args_array| column_name }
+      }.map { |column_name, *validations| column_name }
     end
 
     def model_always_validates_presence_of?(column_name)
-      validations[column_name.to_sym].any? { |args|
-        args.first == :validates_presence_of &&
-          (args[2].nil? ||
-          [:on, :if, :unless].all? { |config_option|
-            args[2][config_option].nil?
-          })
+      @validations_hash[column_name.to_sym].any? { |validation|
+        validation.present? && !validation.conditional? &&
+          validation.on == :save
       }
     end
     
@@ -558,20 +551,17 @@ module SampleModels
     
     def record_validation(*args)
       field = args[1]
-      @validations[field] << args
+      @validations_hash[field] << Validation.new(*args)
     end
     
     def unconfigured_default_based_on_validations(column)
-      unless validations[column.name.to_sym].empty?
-        inclusion = validations[column.name.to_sym].detect { |ary|
-          ary.first == :validates_inclusion_of
-        }
+      validations = @validations_hash[column.name.to_sym]
+      unless validations.empty?
+        inclusion = validations.detect { |validation| validation.inclusion? }
         if inclusion
-          inclusion.last[:in].first
+          inclusion.config[:in].first
         else
-          as_email = validations[column.name.to_sym].detect { |ary|
-            ary.first == :validates_email_format_of
-          }
+          as_email = validations.detect { |validation| validation.as_email? }
           if as_email
             "#{SampleModels.random_word}@#{SampleModels.random_word}.com"
           end
@@ -580,12 +570,51 @@ module SampleModels
     end
     
     def unique_attributes
-      validations.
-          select { |name, args_array|
-            args_array.any? { |args| args.first == :validates_uniqueness_of }
+      @validations_hash.
+          select { |name, validations|
+            validations.any? { |validation| validation.unique? }
           }.
-          map { |name, args_array| name }.
+          map { |name, validations| name }.
           concat(@force_unique)
+    end
+  end
+  
+  class Validation
+    attr_reader :config
+    
+    def initialize(*args)
+      @type = args.shift
+      @field = args.shift
+      @config = args.shift || {:on => :save}
+    end
+    
+    def as_email?
+      @type == :validates_email_format_of
+    end
+    
+    def conditional?
+      @config[:if] || @config[:unless]
+    end
+    
+    def inclusion?
+      @type == :validates_inclusion_of
+    end
+    
+    def on
+      @config[:on]
+    end
+    
+    def presence?
+      @type == :validates_presence_of
+    end
+    
+    def should_be_applied?(instance)
+      (@config[:if] && instance.send(@config[:if])) ||
+      (@config[:unless] && instance.send(@config[:unless]))
+    end
+    
+    def unique?
+      @type == :validates_uniqueness_of
     end
   end
 end
