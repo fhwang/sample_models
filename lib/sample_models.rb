@@ -608,9 +608,18 @@ module SampleModels
       @type == :validates_presence_of
     end
     
+    def satisfies_condition?(condition, instance)
+      if condition.is_a?(Symbol)
+        instance.send condition
+      else
+        condition.call instance
+      end
+    end
+    
     def should_be_applied?(instance)
-      (@config[:if] && instance.send(@config[:if])) ||
-      (@config[:unless] && instance.send(@config[:unless]))
+      (@config[:if] && satisfies_condition?(@config[:if], instance)) ||
+      (@config[:unless] && !satisfies_condition?(@config[:unless], instance)) ||
+      @config[:if].nil? && @config[:unless].nil?
     end
     
     def unique?

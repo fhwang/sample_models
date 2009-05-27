@@ -94,6 +94,7 @@ class Comment < ActiveRecord::Base
   
   validates_presence_of :blog_post_id
   validates_presence_of :user_id
+  validates_presence_of :comment, :if => Proc.new { |c| c.user_id? }
 end
 
 class Episode < ActiveRecord::Base
