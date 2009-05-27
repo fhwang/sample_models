@@ -77,6 +77,18 @@ module SampleModels
       SampleModels.samplers[@model_class]
     end
     
+    def set_instance_attributes(instance)
+      instance.attributes = @suggested.merge @required
+      sampler.missing_fields_from_conditional_validated_presences(
+        instance
+      ).each do |field|
+        column = @model_class.columns_hash[field.to_s]
+        instance[field] = InferredDefaultValue.new(
+          sampler, false, column
+        ).value
+      end
+    end
+    
     class ConfiguredDefaults
       attr_reader :values
       
@@ -304,9 +316,8 @@ module SampleModels
     
     def create!
       @instance = begin
-        instance = model_class.new(
-          @attributes.suggested.merge(@attributes.required)
-        )
+        instance = model_class.new
+        @attributes.set_instance_attributes instance
         if @sampler.before_save
           @sampler.before_save.call instance
         end
@@ -517,6 +528,18 @@ module SampleModels
           # return nil
         end
       end
+    end
+    
+    def missing_fields_from_conditional_validated_presences(instance)
+      validations.select { |column_name, args_array|
+        args_array.any? { |args|
+          args.first == :validates_presence_of && args[2] &&
+          (
+            (args[2][:if] && instance.send(args[2][:if])) ||
+            (args[2][:unless] && !instance.send(args[2][:unless]))
+           )
+        }
+      }.map { |column_name, *args_array| column_name }
     end
 
     def model_always_validates_presence_of?(column_name)

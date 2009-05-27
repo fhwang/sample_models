@@ -525,4 +525,10 @@ describe 'Model with an association that validates presence :if => [method], but
     bp.category.should be_nil
     bp.category_id.should be_nil
   end
+  
+  it 'should set the association early on if the :if evaluates to true' do
+    bp = BlogPost.sample :category_ranking => 99
+    bp.category.should_not be_nil
+    bp.category_id.should_not be_nil
+  end
 end
