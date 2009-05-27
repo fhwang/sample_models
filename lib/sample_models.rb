@@ -132,18 +132,18 @@ module SampleModels
         @belongs_to_assoc ||= @sampler.belongs_to_assoc_for(@column)
       end
       
-      def has_belongs_to_assoc_without_validated_presence?
+      def has_belongs_to_assoc_without_always_validated_presence?
         belongs_to_assoc &&
-            !@sampler.model_validates_presence_of?(@column.name)
+            !@sampler.model_always_validates_presence_of?(@column.name)
       end
       
       def has_proxied_association?
-        has_belongs_to_assoc_without_validated_presence? &&
+        has_belongs_to_assoc_without_always_validated_presence? &&
             (belongs_to_assoc.class_name != @sampler.model_class.name)
       end
       
       def has_value?
-        !has_belongs_to_assoc_without_validated_presence? &&
+        !has_belongs_to_assoc_without_always_validated_presence? &&
             @column.type != :boolean
       end
       
@@ -519,9 +519,13 @@ module SampleModels
       end
     end
 
-    def model_validates_presence_of?(column_name)
+    def model_always_validates_presence_of?(column_name)
       validations[column_name.to_sym].any? { |args|
-        args.first == :validates_presence_of
+        args.first == :validates_presence_of &&
+          (args[2].nil? ||
+          [:on, :if, :unless].all? { |config_option|
+            args[2][config_option].nil?
+          })
       }
     end
     

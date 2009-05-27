@@ -20,7 +20,7 @@ silence_stream(STDOUT) do
     
     create_table 'blog_posts', :force => true do |blog_post|
       blog_post.integer 'user_id', 'merged_into_id', 'category_id',
-                        'comments_count'
+                        'comments_count', 'category_ranking'
       blog_post.string  'title'
     end
     
@@ -81,6 +81,7 @@ class BlogPost < ActiveRecord::Base
              :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
   
+  validates_presence_of :category_id, :if => :category_ranking
   validates_presence_of :user_id
 end
 
@@ -155,8 +156,9 @@ SampleModels.configure BadSample do |b|
 end
 
 SampleModels.configure BlogPost do |bp|
-  bp.default.category nil
-  bp.force_unique     :title
+  bp.default.category         nil
+  bp.default.category_ranking nil
+  bp.force_unique             :title
 end
 
 SampleModels.configure Episode do |ep|
@@ -281,12 +283,6 @@ describe 'Model with a belongs_to association' do
     )
     show.name.should == "The Daily Show"
     show.network.name.should == 'Comedy Central'
-  end
-  
-  it 'should be able to configure an association as nil by default' do
-    bp = BlogPost.sample
-    bp.category.should be_nil
-    bp.category_id.should be_nil
   end
 end
 
@@ -514,5 +510,19 @@ describe 'Model.sample when a instance already exists in the DB but has differen
     user2.gender.should == 'f'
     user2.email.should == 'joebob@email.com'
     user2.bio.should == "here's my bio"
+  end
+end
+
+describe 'Model with an association that validates presence :if => [method], but is configured to nil' do
+  it 'should set the association to nil by default' do
+    bp = BlogPost.sample
+    bp.category.should be_nil
+    bp.category_id.should be_nil
+  end
+  
+  it 'should also set the association to nil even when other atts are set custom' do
+    bp = BlogPost.sample :title => "That shore was funny"
+    bp.category.should be_nil
+    bp.category_id.should be_nil
   end
 end
