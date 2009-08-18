@@ -51,14 +51,16 @@ module SampleModels
       
       def find
         unless @sampler.unique_attributes.empty?
-          find_attributes = {}
+          ar_query = ARQuery.new
+          ar_query.boolean_join = :or
           @sampler.unique_attributes.each do |name|
-            find_attributes[name] =
-                @attributes.required[name] || @attributes.suggested[name]
+            value = @attributes.required[name] || @attributes.suggested[name]
+            if value
+              ar_query.condition_sqls << "#{name} = ?"
+              ar_query.condition_bind_vars << value
+            end
           end
-          @instance = @sampler.model_class.find(
-            :first, :conditions => find_attributes
-          )
+          @instance = @sampler.model_class.find :first, ar_query.to_hash
           update_existing_record if @instance
         end
         @instance

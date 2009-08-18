@@ -76,8 +76,10 @@ module SampleModels
     end
     
     def record_validation(*args)
-      field = args[1]
-      @validations_hash[field] << Validation.new(*args)
+      validation = Validation.new *args
+      validation.fields.each do |field|
+        @validations_hash[field] << validation
+      end
     end
     
     def unconfigured_default_based_on_validations(column)

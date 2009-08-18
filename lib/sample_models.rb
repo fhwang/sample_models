@@ -4,6 +4,7 @@ require 'delegate'
 require "#{File.dirname(__FILE__)}/sample_models/attributes"
 require "#{File.dirname(__FILE__)}/sample_models/creation"
 require "#{File.dirname(__FILE__)}/sample_models/sampler"
+require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
   
 module SampleModels
   mattr_reader   :samplers
@@ -114,14 +115,24 @@ module SampleModels
       SampleModels.samplers[assoc_class].default_creation.verified_instance
     end
   end
-  
+
   class Validation
-    attr_reader :config
+    attr_reader :config, :fields
     
     def initialize(*args)
       @type = args.shift
-      @field = args.shift
-      @config = args.shift || {:on => :save}
+      @config = case @type
+        when :validates_email_format_of
+          { :message => ' does not appear to be a valid e-mail address', 
+            :on => :save, 
+            :with => ValidatesEmailFormatOf::Regex }
+        when :validates_inclusion_of, :validates_presence_of
+          {:on => :save}
+        when :validates_uniqueness_of
+          { :case_sensitive => true }
+      end
+      @config.update args.extract_options!
+      @fields = args
     end
     
     def as_email?

@@ -136,7 +136,7 @@ class User < ActiveRecord::Base
 
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w( m f )
-  validates_uniqueness_of   :login
+  validates_uniqueness_of   :email, :login
 end
 
 class Video < ActiveRecord::Base
