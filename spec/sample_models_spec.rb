@@ -63,7 +63,7 @@ silence_stream(STDOUT) do
       user.date    'birthday'
       user.float   'avg_rating'
       user.string  'login', 'password', 'homepage', 'creation_note', 'gender',
-                   'email', 'first_name', 'last_name'
+                   'email', 'first_name', 'last_name', 'crypted_password'
       user.text    'bio', 'irc_nick'
       user.integer 'favorite_blog_post_id'
     end
@@ -150,9 +150,28 @@ class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
 
+  # Some boilerplate from restful_authentication
+  attr_accessor :password
+
+  validates_presence_of     :login, :email
+  validates_presence_of     :password,
+                            :if => :password_required?
+  validates_presence_of     :password_confirmation,
+                            :if => :password_required?
+  validates_length_of       :password,
+                            :within => 4..40, :if => :password_required?
+  validates_confirmation_of :password,
+                            :if => :password_required?
+  validates_length_of       :login, :within => 3..40
+  validates_length_of       :email, :within => 3..100
+  validates_uniqueness_of   :login, :email, :case_sensitive => false
+
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w( m f )
-  validates_uniqueness_of   :email, :login
+  
+  def password_required?
+    crypted_password.blank? || !password.blank?
+  end
 end
 
 class Video < ActiveRecord::Base
@@ -212,13 +231,14 @@ SampleModels.configure ThisOrThat do |this_or_that|
   this_or_that.force_on_create      :show
 end
 
-SampleModels.configure User do |u|
-  u.default do |default|
+SampleModels.configure User do |user|
+  user.default do |default|
     default.creation_note { "Started at #{ Time.now.to_s }" }
     default.homepage      'http://www.test.com/'
     default.irc_nick      nil
   end
-  u.default_to_nil :first_name, :last_name
+  user.default_to_nil :first_name, :last_name
+  user.before_save { |u| u.password_confirmation = u.password if u.password }
 end
 
 SampleModels.configure Video do |video|
@@ -245,7 +265,7 @@ describe "Model.sample" do
 
   it "should set text fields by default starting with 'test '" do
     user = User.sample
-    user.password.should == 'Test password'
+    user.crypted_password.should == 'Test crypted_password'
     user.bio.should == 'Test bio'
   end
     
@@ -407,7 +427,7 @@ describe 'Model with a unique string attribute' do
     User.destroy_all
     user = User.create!(
       :login => 'Test login', :homepage => 'http://www.google.com/',
-      :gender => 'f', :email => 'foo@bar.com'
+      :gender => 'f', :email => 'foo@bar.com', :crypted_password => 'asdf'
     )
     user_prime = User.sample
     user_prime.login.should == user.login
@@ -576,14 +596,14 @@ describe 'Model.sample when a instance already exists in the DB but has differen
     User.destroy_all
     user1 = User.create!(
       :birthday => Date.new(1960, 1, 1), :avg_rating => 99.99,
-      :login => 'Test login', :password => 'foobar', :gender => 'f',
+      :login => 'Test login', :crypted_password => 'foobar', :gender => 'f',
       :email => 'joebob@email.com', :bio => "here's my bio"
     )
     user2 = User.sample
     user1.id.should == user2.id
     user2.birthday.should == Date.new(1960, 1, 1)
     user2.avg_rating.should == 99.99
-    user2.password.should == 'foobar'
+    user2.crypted_password.should == 'foobar'
     user2.gender.should == 'f'
     user2.email.should == 'joebob@email.com'
     user2.bio.should == "here's my bio"
@@ -609,3 +629,4 @@ describe 'Model with an association that validates presence :if => [method], but
     bp.category_id.should_not be_nil
   end
 end
+

@@ -54,7 +54,8 @@ module SampleModels
     def missing_fields_from_conditional_validated_presences(instance)
       @validations_hash.select { |column_name, validations|
         validations.any? { |validation|
-          validation.presence? && validation.conditional? && validation.should_be_applied?(instance)
+          validation.presence? && validation.conditional? && validation.should_be_applied?(instance) &&
+          instance.send(column_name).blank?
         }
       }.map { |column_name, *validations| column_name }
     end
@@ -87,8 +88,8 @@ module SampleModels
       SampleModels::CustomCreation.new(self, custom_attrs, force_create).run
     end
     
-    def unconfigured_default_based_on_validations(column)
-      validations = @validations_hash[column.name.to_sym]
+    def unconfigured_default_based_on_validations(column_name)
+      validations = @validations_hash[column_name.to_sym]
       unless validations.empty?
         inclusion = validations.detect { |validation| validation.inclusion? }
         if inclusion

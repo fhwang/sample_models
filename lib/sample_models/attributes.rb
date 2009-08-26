@@ -57,10 +57,9 @@ module SampleModels
       sampler.missing_fields_from_conditional_validated_presences(
         instance
       ).each do |field|
-        column = @model_class.columns_hash[field.to_s]
-        instance[field] = InferredDefaultValue.new(
-          sampler, false, column
-        ).value
+        instance.send(
+          "#{field}=", InferredDefaultValue.new(sampler, false, field).value
+        )
       end
     end
     
@@ -133,7 +132,9 @@ module SampleModels
       end
       
       def value
-        InferredDefaultValue.new(@sampler, @force_create, @column).value
+        InferredDefaultValue.new(
+          @sampler, @force_create, @column.name.to_sym
+        ).value
       end
     end
     
@@ -166,29 +167,38 @@ module SampleModels
     end
     
     class InferredDefaultValue
-      def initialize(sampler, force_create, column)
-        @sampler, @force_create, @column = sampler, force_create, column
+      def initialize(sampler, force_create, column_name)
+        @sampler, @force_create, @column_name =
+            sampler, force_create, column_name
+      end
+      
+      def column
+        @column ||= @sampler.model_class.columns_hash[@column_name.to_s]
       end
       
       def needs_random_unique_value?
-        @force_create && @sampler.model_validates_uniqueness_of?(@column.name)
+        @force_create && @sampler.model_validates_uniqueness_of?(@column_name)
       end
       
       def value
-        udf = @sampler.unconfigured_default_based_on_validations @column        
-        udf || case @column.type
-          when :binary, :string, :text
-            value_for_text
-          when :date
-            value_for_date
-          when :datetime
-            value_for_time
-          when :float
-            value_for_float
-          when :integer
-            value_for_integer
-          else
-            raise "No default value for type #{ @column.type.inspect }"
+        udf = @sampler.unconfigured_default_based_on_validations @column_name
+        udf || if column
+          case column.type
+            when :binary, :string, :text
+              value_for_text
+            when :date
+              value_for_date
+            when :datetime
+              value_for_time
+            when :float
+              value_for_float
+            when :integer
+              value_for_integer
+            else
+              raise "No default value for type #{ column.type.inspect }"
+          end
+        else
+          value_for_text
         end
       end
       
@@ -213,7 +223,7 @@ module SampleModels
       end
       
       def value_for_integer
-        if assoc = @sampler.belongs_to_assoc_for( @column )
+        if assoc = @sampler.belongs_to_assoc_for( column )
           assoc_class = Module.const_get assoc.class_name
           if needs_random_unique_value?
             SampleModels.samplers[assoc_class].sample({}, true).id
@@ -229,7 +239,7 @@ module SampleModels
         if needs_random_unique_value?
           SampleModels.random_word
         else
-          "Test #{ @column.name }"
+          "Test #{ @column_name }"
         end
       end
     end
