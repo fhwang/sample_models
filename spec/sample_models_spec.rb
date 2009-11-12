@@ -67,6 +67,10 @@ silence_stream(STDOUT) do
     create_table 'videos', :force => true do |video|
       video.integer 'show_id', 'episode_id', 'network_id'
     end
+    
+    create_table 'video_takedown_events', :force => true do |vte|
+      vte.integer 'video_id'
+    end
   end
 end
 
@@ -151,6 +155,13 @@ class Video < ActiveRecord::Base
   end
 end
 
+class VideoTakedownEvent < ActiveRecord::Base
+  belongs_to :video
+  
+  validates_presence_of   :video_id
+  validates_uniqueness_of :video_id
+end
+
 # SampleModel configuration
 SampleModels.configure BadSample do |b|
   b.default.title ''
@@ -191,7 +202,7 @@ SampleModels.configure User do |u|
 end
 
 SampleModels.configure Video do |video|
-  video.before_save { |v| v.show ||= v.episode.show if v.episode }
+  video.before_save { |v| v.show = v.episode.show if v.episode }
 end
 
 # Actual specs start here ...
@@ -384,6 +395,17 @@ describe 'Model with a unique value' do
   it 'should know to create a new sample if any other fields are passed in' do
     user = User.sample :password => 'password'
     user.login.should_not == 'Test login'
+  end
+end
+
+describe 'Model with a unique associated attribute' do
+  it 'should create a random unique associated record each time you call create_sample' do
+    video_ids = {}
+    10.times do
+      created = VideoTakedownEvent.create_sample
+      video_ids[created.video_id].should be_nil
+      video_ids[created.video_id] = true
+    end
   end
 end
 

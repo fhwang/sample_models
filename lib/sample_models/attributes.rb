@@ -197,7 +197,12 @@ module SampleModels
       def value_for_integer
         if assoc = @sampler.belongs_to_assoc_for( @column )
           assoc_class = Module.const_get assoc.class_name
-          SampleModels.samplers[assoc_class].default_creation.verified_instance.id
+          if @force_create &&
+             @sampler.model_validates_uniqueness_of?(@column.name)
+            SampleModels.samplers[assoc_class].sample({}, true).id
+          else
+            SampleModels.samplers[assoc_class].default_creation.verified_instance.id
+          end
         else
           0
         end

@@ -23,7 +23,11 @@ module SampleModels
     
     def find_or_create
       @attributes = Attributes.new model_class, @force_create, @custom_attrs
-      Finder.new(@sampler, @attributes).find || create!
+      if @force_create
+        create!
+      else
+        Finder.new(@sampler, @attributes).find || create!
+      end
     end
     
     def instance
@@ -41,7 +45,17 @@ module SampleModels
         needs_save = true
         @instance.send("#{name}=", proxied_association.instance.id)
       end
-      @instance.save! if needs_save
+      if needs_save
+        if @sampler.before_save
+          @sampler.before_save.call instance
+        end
+        begin
+          @instance.save!
+        rescue ActiveRecord::RecordInvalid
+          $!.to_s =~ /Validation failed: (.*)/
+          raise "#{model_class.name} validation failed: #{$1}"
+        end
+      end
     end
     
     class Finder
@@ -126,7 +140,12 @@ module SampleModels
         @sampler.belongs_to_associations.each do |assoc|
           check_assoc_on_default_instance(ds, assoc)
         end
-        ds.save! if @recreated_associations
+        begin
+          ds.save! if @recreated_associations
+        rescue ActiveRecord::RecordInvalid
+          $!.to_s =~ /Validation failed: (.*)/
+          raise "#{model_class.name} validation failed: #{$1}"
+        end
       else
         set_default
       end
