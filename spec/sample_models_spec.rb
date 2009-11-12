@@ -68,6 +68,10 @@ silence_stream(STDOUT) do
       video.integer 'show_id', 'episode_id', 'network_id'
     end
     
+    create_table 'video_favorites', :force => true do |video_favorite|
+      video_favorite.integer 'user_id', 'video_id'
+    end
+    
     create_table 'video_takedown_events', :force => true do |vte|
       vte.integer 'video_id'
     end
@@ -153,6 +157,14 @@ class Video < ActiveRecord::Base
       errors.add "needs same show as the episode"
     end
   end
+end
+
+class VideoFavorite < ActiveRecord::Base
+  belongs_to :video
+  belongs_to :user
+  
+  validates_presence_of :user_id, :video_id
+  validates_uniqueness_of :video_id, :scope => :user_id
 end
 
 class VideoTakedownEvent < ActiveRecord::Base
@@ -410,6 +422,16 @@ describe 'Model with a unique associated attribute' do
       video_ids[created.video_id].should be_nil
       video_ids[created.video_id] = true
     end
+  end
+end
+
+describe 'Model with a unique scoped associated attribute' do
+  it 'should create a new instance when you create_sample with the same scope variable as before' do
+    video_fav1 = VideoFavorite.sample
+    video_fav2 = VideoFavorite.create_sample :user => video_fav1.user
+    video_fav1.should_not == video_fav2
+    video_fav1.user.should == video_fav2.user
+    video_fav1.video.should_not == video_fav2.video
   end
 end
 
