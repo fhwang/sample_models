@@ -306,6 +306,10 @@ describe 'Model with a belongs_to association of the same class' do
   it 'should be nil by default' do
     @blog_post.merged_into.should be_nil
   end
+  
+  it 'should not be itself by default' do
+    @blog_post.merged_into.should_not == @blog_post
+  end
 end
 
 describe 'Model with a triangular belongs-to association' do

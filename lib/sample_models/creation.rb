@@ -116,7 +116,9 @@ module SampleModels
   class DefaultCreation < Creation
     def each_updateable_association
       @attributes.proxied_associations.each do |name, proxied_association|
-        yield name, proxied_association
+        unless proxied_association.assoc_class == model_class
+          yield name, proxied_association
+        end
       end
     end
     

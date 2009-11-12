@@ -119,23 +119,17 @@ module SampleModels
         @belongs_to_assoc ||= @sampler.belongs_to_assoc_for(@column)
       end
       
-      def has_belongs_to_assoc_without_always_validated_presence?
+      def has_belongs_to_assoc_that_can_be_set_after_initial_creation?
         belongs_to_assoc &&
             !@sampler.model_always_validates_presence_of?(@column.name)
       end
       
-      def has_proxied_association?
-        has_belongs_to_assoc_without_always_validated_presence? &&
-            (belongs_to_assoc.class_name != @sampler.model_class.name)
-      end
-      
-      def has_value?
-        !has_belongs_to_assoc_without_always_validated_presence? &&
-            @column.type != :boolean
-      end
-      
       def proxied_association
         ProxiedAssociation.new belongs_to_assoc
+      end
+      
+      def should_use_value?
+        @column.type != :boolean
       end
       
       def value
@@ -155,18 +149,18 @@ module SampleModels
         )
         @sampler.model_class.columns.each do |column|
           unless uninferrable_columns.include?(column.name)
-            build_inferred_attribute_or_proxied_association(column)
+            try_setting_inferred_default(column)
           end
         end
       end
       
-      def build_inferred_attribute_or_proxied_association(column)
+      def try_setting_inferred_default(column)
         name = column.name.to_sym
-        inferred_default = InferredDefault.new @sampler, @force_create, column
-        if inferred_default.has_proxied_association?
-          @proxied_associations[name] = inferred_default.proxied_association
-        elsif inferred_default.has_value?
-          @values[name] = inferred_default.value
+        i_d = InferredDefault.new @sampler, @force_create, column
+        if i_d.has_belongs_to_assoc_that_can_be_set_after_initial_creation?
+          @proxied_associations[name] = i_d.proxied_association
+        elsif i_d.should_use_value?
+          @values[name] = i_d.value
         end
       end
     end
