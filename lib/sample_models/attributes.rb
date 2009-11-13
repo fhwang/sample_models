@@ -170,17 +170,21 @@ module SampleModels
         @sampler, @force_create, @column = sampler, force_create, column
       end
       
+      def needs_random_unique_value?
+        @force_create && @sampler.model_validates_uniqueness_of?(@column.name)
+      end
+      
       def value
-        udf = @sampler.unconfigured_default_based_on_validations @column
+        udf = @sampler.unconfigured_default_based_on_validations @column        
         udf || case @column.type
           when :binary, :string, :text
             value_for_text
           when :date
-            Date.today
+            value_for_date
           when :datetime
-            Time.now.utc
+            value_for_time
           when :float
-            0.0
+            value_for_float
           when :integer
             value_for_integer
           else
@@ -188,11 +192,30 @@ module SampleModels
         end
       end
       
+      def value_for_date
+        value_for_time.send :to_date
+      end
+      
+      def value_for_float
+        if needs_random_unique_value?
+          rand
+        else
+          0.0
+        end
+      end
+      
+      def value_for_time
+        if needs_random_unique_value?
+          Time.utc(1970 + rand(50), rand(12) + 1, rand(28) + 1)
+        else
+          Time.now.utc
+        end
+      end
+      
       def value_for_integer
         if assoc = @sampler.belongs_to_assoc_for( @column )
           assoc_class = Module.const_get assoc.class_name
-          if @force_create &&
-             @sampler.model_validates_uniqueness_of?(@column.name)
+          if needs_random_unique_value?
             SampleModels.samplers[assoc_class].sample({}, true).id
           else
             SampleModels.samplers[assoc_class].default_creation.verified_instance.id
@@ -203,8 +226,7 @@ module SampleModels
       end
       
       def value_for_text
-        if @force_create and
-           @sampler.model_validates_uniqueness_of?(@column.name)
+        if needs_random_unique_value?
           SampleModels.random_word
         else
           "Test #{ @column.name }"

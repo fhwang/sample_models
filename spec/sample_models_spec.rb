@@ -14,6 +14,10 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 # Create the DB schema
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
+    create_table 'appointments', :force => true do |appointment|
+      appointment.datetime 'time'
+    end
+    
     create_table 'bad_samples', :force => true do |bad_sample|
       bad_sample.string 'title'
     end
@@ -79,6 +83,10 @@ silence_stream(STDOUT) do
 end
 
 # Define ActiveRecord classes
+class Appointment < ActiveRecord::Base
+  validates_uniqueness_of :time
+end
+
 class BadSample < ActiveRecord::Base
   validates_presence_of :title
 end
@@ -378,7 +386,7 @@ describe 'Model with a redundant but validated association' do
   end
 end
 
-describe 'Model with a unique value' do
+describe 'Model with a unique string attribute' do
   it 'should create a random unique value each time you call create_sample' do
     logins = {}
     10.times do
@@ -420,6 +428,17 @@ describe 'Model with a unique value' do
   it 'should know to create a new sample if any other fields are passed in' do
     user = User.sample :password => 'password'
     user.login.should_not == 'Test login'
+  end
+end
+
+describe 'Model with a unique time attribute' do
+  it 'should create a random unique value each time you call create_sample' do
+    times = {}
+    10.times do
+      custom = Appointment.create_sample
+      times[custom.time].should be_nil
+      times[custom.time] = true
+    end
   end
 end
 
