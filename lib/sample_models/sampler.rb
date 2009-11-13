@@ -35,11 +35,6 @@ module SampleModels
       @default_creation = nil
     end
     
-    def sample(custom_attrs, force_create = false)
-      force_create = true if !custom_attrs.empty?
-      SampleModels::CustomCreation.new(self, custom_attrs, force_create).run
-    end
-    
     def default_creation
       @default_creation ||= SampleModels::DefaultCreation.new(self)
       @default_creation
@@ -80,6 +75,16 @@ module SampleModels
       validation.fields.each do |field|
         @validations_hash[field] << validation
       end
+    end
+    
+    def sample(custom_attrs, force_create = false)
+      unless custom_attrs.empty? ||
+             custom_attrs.keys.any? { |attr|
+               model_validates_uniqueness_of?(attr)
+             }
+        force_create = true
+      end
+      SampleModels::CustomCreation.new(self, custom_attrs, force_create).run
     end
     
     def unconfigured_default_based_on_validations(column)

@@ -408,6 +408,15 @@ describe 'Model with a unique value' do
     user.homepage.should == 'http://www.test.com/'
   end
   
+  it 'should be able to modify other fields on the previously saved record if you specify the unique field' do
+    user = User.sample
+    user_prime = User.sample :login => user.login, :irc_nick => 'test_irc_nick'
+    user_prime.id.should == user.id
+    user_prime.irc_nick.should == 'test_irc_nick'
+    user.reload
+    user.irc_nick.should == 'test_irc_nick'
+  end
+  
   it 'should know to create a new sample if any other fields are passed in' do
     user = User.sample :password => 'password'
     user.login.should_not == 'Test login'
