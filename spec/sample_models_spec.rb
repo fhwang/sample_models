@@ -69,7 +69,9 @@ silence_stream(STDOUT) do
     end
     
     create_table 'videos', :force => true do |video|
+      video.string  'name'
       video.integer 'show_id', 'episode_id', 'network_id'
+      video.date    'featured_at'
     end
     
     create_table 'video_favorites', :force => true do |video_favorite|
@@ -243,6 +245,7 @@ end
 
 SampleModels.configure Video do |video|
   video.before_save { |v| v.show = v.episode.show if v.episode }
+  video.force_unique :featured_at
 end
 
 # Actual specs start here ...
@@ -562,6 +565,23 @@ describe 'Model configured with .force_unique' do
   it 'should generated a new value for sample calls with custom attrs' do
     bp = BlogPost.sample :user => {:login => 'francis'}
     bp.title.should_not == 'Test title'
+  end
+  
+  it 'should allow nil uniqued attribute if the model allows' do
+    video = Video.sample :featured_at => nil
+    video.featured_at.should be_nil
+  end
+  
+  it 'should not get confused by a previous record and nil uniqued attributes' do
+    Video.destroy_all
+    prev_video = Video.create! :featured_at => Date.today
+    new_video = Video.sample :featured_at => nil, :name => 'my own name'
+    new_video.id.should_not == prev_video.id
+    new_video.featured_at.should be_nil
+    new_video.name.should == 'my own name'
+    new_video.reload
+    new_video.featured_at.should be_nil
+    new_video.name.should == 'my own name'
   end
 end
 

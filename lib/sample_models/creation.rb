@@ -68,7 +68,7 @@ module SampleModels
           ar_query.boolean_join = :or
           @sampler.unique_attributes.each do |name|
             value = @attributes.required[name] || @attributes.suggested[name]
-            if value
+            if value or @attributes.required.has_key?(name)
               ar_query.condition_sqls << "#{name} = ?"
               ar_query.condition_bind_vars << value
             end
