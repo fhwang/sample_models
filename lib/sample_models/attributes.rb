@@ -105,7 +105,9 @@ module SampleModels
                 assoc = sampler.has_many_through_assoc_for(field_name)
             assoc_class = Module.const_get assoc.class_name
             sampler_for_assoc = SampleModels.samplers[assoc_class]
-            @values[field_name] = value.map { |h| sampler_for_assoc.sample(h) }
+            @values[field_name] = value.map { |v|
+              v.is_a?(Hash) ? sampler_for_assoc.sample(v) : v
+            }
           else
             @values[field_name] = value
           end
