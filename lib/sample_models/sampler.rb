@@ -51,6 +51,13 @@ module SampleModels
       end
     end
     
+    def has_many_through_assoc_for(name)
+      @model_class.reflect_on_all_associations.detect { |assoc|
+        assoc.macro == :has_many && assoc.options[:through] &&
+            assoc.name.to_sym == name
+      }
+    end
+    
     def missing_fields_from_conditional_validated_presences(instance)
       @validations_hash.select { |column_name, validations|
         validations.any? { |validation|

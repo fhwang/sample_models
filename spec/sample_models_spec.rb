@@ -28,6 +28,11 @@ silence_stream(STDOUT) do
       blog_post.string  'title'
     end
     
+    create_table "blog_post_tags", :force => true do |t|
+      t.integer "blog_post_id"
+      t.integer "tag_id"
+    end
+
     create_table 'categories', :force => true do |category|
     end
     
@@ -55,6 +60,10 @@ silence_stream(STDOUT) do
       show.integer 'network_id'
     end
     
+    create_table "tags", :force => true do |t|
+      t.string  "tag"
+    end
+
     create_table 'this_or_thats', :force => true do |this_or_that|
       this_or_that.integer 'show_id', 'network_id'
     end
@@ -98,9 +107,16 @@ class BlogPost < ActiveRecord::Base
   belongs_to :merged_into,
              :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
+  has_many :blog_post_tags
+  has_many :tags, :through => :blog_post_tags
   
   validates_presence_of :category_id, :if => :category_ranking
   validates_presence_of :user_id
+end
+
+class BlogPostTag < ActiveRecord::Base
+  belongs_to :blog_post
+  belongs_to :tag
 end
 
 class Category < ActiveRecord::Base
@@ -133,6 +149,13 @@ class Show < ActiveRecord::Base
   validates_uniqueness_of :name
   
   belongs_to :network
+end
+
+class Tag < ActiveRecord::Base
+  validates_uniqueness_of :tag
+  
+  has_many :blog_post_tags
+  has_many :blog_posts, :through => :blog_post_tags
 end
 
 class ThisOrThat < ActiveRecord::Base
@@ -647,6 +670,14 @@ describe 'Model with an association that validates presence :if => [method], but
     bp = BlogPost.sample :category_ranking => 99
     bp.category.should_not be_nil
     bp.category_id.should_not be_nil
+  end
+end
+
+describe 'Model with a has-many through association' do
+  it 'should make it possible to assign as hashes' do
+    bp = BlogPost.sample :tags => [{:tag => 'funny'}]
+    bp.tags.size.should == 1
+    bp.tags.first.tag.should == 'funny'
   end
 end
 

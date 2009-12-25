@@ -101,6 +101,11 @@ module SampleModels
             assoc_class = Module.const_get assoc.class_name
             sampler_for_assoc = SampleModels.samplers[assoc_class]
             @values[field_name] = sampler_for_assoc.sample value
+          elsif value.is_a?(Array) &&
+                assoc = sampler.has_many_through_assoc_for(field_name)
+            assoc_class = Module.const_get assoc.class_name
+            sampler_for_assoc = SampleModels.samplers[assoc_class]
+            @values[field_name] = value.map { |h| sampler_for_assoc.sample(h) }
           else
             @values[field_name] = value
           end
