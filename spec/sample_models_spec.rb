@@ -304,10 +304,6 @@ describe "Model.sample" do
   it 'should not override a boolean default' do
     Comment.sample.flagged_as_spam.should be_false
   end
-  
-  it 'should set integer fields to default 0' do
-    BlogPost.sample.comments_count.should == 0
-  end
 end
 
 describe 'Model with a belongs_to association' do
