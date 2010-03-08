@@ -214,11 +214,7 @@ module SampleModels
       end
       
       def value_for_float
-        if needs_random_unique_value?
-          rand
-        else
-          0.0
-        end
+        rand
       end
       
       def value_for_time

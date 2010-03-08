@@ -285,10 +285,6 @@ describe "Model.sample" do
     User.sample.homepage.should == 'http://www.test.com/'
   end
     
-  it 'should set floats to 0.0' do
-    User.sample.avg_rating.should == 0.0
-  end
-
   it "should set text fields by default starting with 'test '" do
     user = User.sample
     user.crypted_password.should == 'Test crypted_password'
