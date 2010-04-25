@@ -1,3 +1,28 @@
+if RAILS_ENV == 'test' # no reason to run this code outside of test mode
+module SampleModels
+  protected
+  
+  def self.included( mod )
+    mod.extend ARClassMethods
+    super
+  end
+  
+  module ARClassMethods
+    def sample(attrs={})
+      create! attrs
+    end
+  end
+end
+
+module ActiveRecord
+  class Base
+    include SampleModels
+  end
+end
+
+end # if RAILS_ENV == 'test'
+
+
 =begin
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
 

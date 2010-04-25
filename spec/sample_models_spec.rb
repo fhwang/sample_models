@@ -11,6 +11,34 @@ config = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
 ActiveRecord::Base.logger = Logger.new(File.dirname(__FILE__) + '/debug.log')
 ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 
+# ============================================================================
+# Create the DB schema
+silence_stream(STDOUT) do
+  ActiveRecord::Schema.define do
+    create_table 'users', :force => true do |user|
+      user.string 'homepage', 'password'
+    end
+  end
+end
+    
+# ============================================================================
+# Define ActiveRecord classes
+class User < ActiveRecord::Base
+end
+
+# ============================================================================
+# Actual specs start here ...
+describe "Model.sample" do
+  it 'should allow overrides of all fields in sample' do
+    user = User.sample(
+      :homepage => 'http://mysite.com/', :password => 'myownpassword'
+    )
+    user.homepage.should == 'http://mysite.com/'
+    user.password.should == 'myownpassword'
+  end
+end
+
+
 =begin
 # Create the DB schema
 silence_stream(STDOUT) do
