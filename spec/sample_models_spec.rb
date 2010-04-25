@@ -18,11 +18,18 @@ silence_stream(STDOUT) do
     create_table 'users', :force => true do |user|
       user.string 'email', 'gender', 'homepage', 'password'
     end
+
+    create_table 'comments', :force => true do |comment|
+      comment.boolean 'flagged_as_spam', :default => false
+    end
   end
 end
     
 # ============================================================================
 # Define ActiveRecord classes
+class Comment < ActiveRecord::Base
+end
+
 class User < ActiveRecord::Base
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
@@ -61,6 +68,10 @@ describe "Model.sample" do
       ActiveRecord::RecordInvalid,
       'Validation failed: Email  does not appear to be a valid e-mail address'
     )
+  end
+  
+  it 'should not override a boolean default' do
+    Comment.sample.flagged_as_spam.should be_false
   end
 end
 
@@ -327,11 +338,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe "Model.sample" do   
-  it 'should not override a boolean default' do
-    Comment.sample.flagged_as_spam.should be_false
-  end
-end
 
 describe 'Model with a belongs_to association' do
   it 'should be associated with the belongs_to recipient by default' do
