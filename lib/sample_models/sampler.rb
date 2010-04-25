@@ -1,3 +1,4 @@
+=begin
 module SampleModels
   class Sampler
     attr_accessor :before_save, :force_on_create, :force_unique
@@ -120,3 +121,4 @@ module SampleModels
     end
   end
 end
+=end

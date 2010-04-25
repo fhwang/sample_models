@@ -1,5 +1,11 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
+  
 module SampleModels
+  mattr_reader   :samplers
+  @@samplers = Hash.new { |h, model_class|
+    h[model_class] = Sampler.new(model_class)
+  }
+
   protected
   
   def self.included( mod )
@@ -9,7 +15,50 @@ module SampleModels
   
   module ARClassMethods
     def sample(attrs={})
-      create! attrs
+      SampleModels.samplers[self].sample attrs
+    end
+  end
+  
+  class Sampler
+    attr_reader :model_class
+    
+    def initialize(model_class)
+      @model_class = model_class
+      @validations_hash = Hash.new { |h, field| h[field] = [] }
+    end
+    
+    def record_validation(*args)
+      validation = Validation.new *args
+      validation.fields.each do |field|
+        @validations_hash[field] << validation
+      end
+    end
+    
+    def sample(attrs)
+      @validations_hash.each do |field, validations|
+        if attrs[field].blank? and v = validations.detect(&:inclusion?)
+          attrs[field] = v.satisfying_value
+        end
+      end
+      model_class.create! attrs
+    end
+  end
+  
+  class Validation
+    attr_reader :fields
+    
+    def initialize(*args)
+      @type = args.shift
+      @config = args.extract_options!
+      @fields = args
+    end
+    
+    def inclusion?
+      @type == :validates_inclusion_of
+    end
+    
+    def satisfying_value
+      @config[:in].first
     end
   end
 end
@@ -17,6 +66,24 @@ end
 module ActiveRecord
   class Base
     include SampleModels
+  end
+  
+  module Validations
+    module ClassMethods
+      [:validates_email_format_of,
+       :validates_inclusion_of, :validates_presence_of, 
+       :validates_uniqueness_of].each do |validation|
+        if method_defined?(validation)
+          define_method "#{validation}_with_sample_models".to_sym do |*args|
+            send "#{validation}_without_sample_models".to_sym, *args
+            SampleModels.samplers[self].record_validation(
+              validation, *args
+            )
+          end
+          alias_method_chain validation, :sample_models
+        end
+      end
+    end
   end
 end
 

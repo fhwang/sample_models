@@ -16,7 +16,7 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
     create_table 'users', :force => true do |user|
-      user.string 'homepage', 'password'
+      user.string 'gender', 'homepage', 'password'
     end
   end
 end
@@ -24,6 +24,7 @@ end
 # ============================================================================
 # Define ActiveRecord classes
 class User < ActiveRecord::Base
+  validates_inclusion_of :gender, :in => %w(f m)
 end
 
 # ============================================================================
@@ -35,6 +36,11 @@ describe "Model.sample" do
     )
     user.homepage.should == 'http://mysite.com/'
     user.password.should == 'myownpassword'
+  end
+    
+  it 'should pick the first value given in a validates_inclusion_if' do
+    user = User.sample
+    user.gender.should == 'f'
   end
 end
 
@@ -301,29 +307,7 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe "Model.sample" do
-  it 'should allow overrides of all fields in sample' do
-    user = User.sample(
-      :homepage => 'http://mysite.com/', :password => 'myownpassword'
-    )
-    user.homepage.should == 'http://mysite.com/'
-    user.password.should == 'myownpassword'
-  end
-    
-  it "should set a field to a configured default" do
-    User.sample.homepage.should == 'http://www.test.com/'
-  end
-    
-  it "should set text fields by default starting with 'test '" do
-    user = User.sample
-    user.crypted_password.should == 'Test crypted_password'
-    user.bio.should == 'Test bio'
-  end
-    
-  it 'should pick the first value given in a validates_inclusion_if' do
-    user = User.sample
-    user.gender.should == 'm'
-  end
+describe "Model.sample" do   
   
   it 'should set emails based on a validation' do
     user = User.sample
