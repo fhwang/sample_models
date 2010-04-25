@@ -36,6 +36,10 @@ silence_stream(STDOUT) do
       user.string  'email', 'gender', 'homepage', 'password'
       user.integer 'favorite_blog_post_id'
     end
+    
+    create_table 'videos', :force => true do |video|
+      video.integer 'show_id', 'network_id'
+    end
   end
 end
     
@@ -56,6 +60,11 @@ class Network < ActiveRecord::Base
 end
 
 class Show < ActiveRecord::Base
+  belongs_to :network
+end
+
+class Video < ActiveRecord::Base
+  belongs_to :show
   belongs_to :network
 end
 
@@ -160,6 +169,20 @@ describe 'Model with a belongs_to association of the same class' do
   
   it 'should be nil by default' do
     @blog_post.merged_into.should be_nil
+  end
+  
+  it 'should not be itself by default' do
+    @blog_post.merged_into.should_not == @blog_post
+  end
+end
+
+describe 'Model with a triangular belongs-to association' do
+  it 'should set unspecified association values to the same default instance' do
+    video = Video.sample :show => {:name => 'House'}
+    video.show.name.should == 'House'
+    video.show.network.should_not be_nil
+    video.network.should_not be_nil
+    video.show.network.should == video.network
   end
 end
 
@@ -426,60 +449,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe 'Model with a belongs_to association of the same class' do
-  before :all do
-    @blog_post = BlogPost.sample
-  end
-  
-  it 'should be nil by default' do
-    @blog_post.merged_into.should be_nil
-  end
-  
-  it 'should not be itself by default' do
-    @blog_post.merged_into.should_not == @blog_post
-  end
-end
-
-describe 'Model with a triangular belongs-to association' do
-  it 'should set unspecified association values to the same default instance' do
-    video = Video.sample :show => {:name => 'House'}, :episode => nil
-    video.show.name.should == 'House'
-    video.show.network.should_not be_nil
-    video.network.should_not be_nil
-    video.show.network.should == video.network
-  end
-end
-
-describe 'Model with a block for a default field' do
-  it 'should evaluate the block every time custom_sample is called' do
-    user1 = User.sample
-    user1.creation_note.should match( /^Started at/ )
-    sleep 1
-    user2 = User.sample
-    user2.creation_note.should match( /^Started at/ )
-    user1.creation_note.should_not == user2.creation_note
-  end
-end
-
-describe 'Model with an invalid default field' do
-  it "should raise an error when sample is called" do
-    BadSample.destroy_all
-    lambda { BadSample.sample }.should raise_error(
-      RuntimeError,
-      /BadSample validation failed: Title can't be blank/
-    )
-  end
-end
-
-describe 'Model with a nil default value' do
-  it 'should set that value in sample' do
-    @user = User.sample
-    @user.irc_nick.should be_nil
-    @user.first_name.should be_nil
-    @user.last_name.should be_nil
-  end
-end
-
 describe 'Model with a redundant but validated association' do
   it 'should create a valid sample when the 2nd-degree association already exists' do
     Show.destroy_all
@@ -749,4 +718,15 @@ describe 'Model with a has-many through association' do
     bp.tags.first.tag.should == 'funny'
   end
 end
+
+describe 'Model with an invalid default field' do
+  it "should raise an error when sample is called" do
+    BadSample.destroy_all
+    lambda { BadSample.sample }.should raise_error(
+      RuntimeError,
+      /BadSample validation failed: Title can't be blank/
+    )
+  end
+end
+
 =end
