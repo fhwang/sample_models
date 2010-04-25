@@ -24,9 +24,11 @@ silence_stream(STDOUT) do
     end
     
     create_table 'networks', :force => true do |network|
+      network.string 'name'
     end
     
     create_table 'shows', :force => true do |show|
+      show.string  'name'
       show.integer 'network_id'
     end
     
@@ -137,6 +139,14 @@ describe 'Model with a belongs_to association' do
   it 'should have no problem with circular associations' do
     User.sample.favorite_blog_post.is_a?(BlogPost).should be_true
     BlogPost.sample.user.is_a?(User).should be_true
+  end
+  
+  it 'should allow creation of a custom associated instance with a hash' do
+    show = Show.sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    show.name.should == "The Daily Show"
+    show.network.name.should == 'Comedy Central'
   end
 end
 
@@ -403,17 +413,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-
-describe 'Model with a belongs_to association' do
-  it 'should allow creation of a custom associated instance with a hash' do
-    show = Show.sample(
-      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
-    )
-    show.name.should == "The Daily Show"
-    show.network.name.should == 'Comedy Central'
-  end
-end
-
 describe 'Model with a belongs_to association of the same class' do
   before :all do
     @blog_post = BlogPost.sample

@@ -53,6 +53,11 @@ module SampleModels
           end
         end
       end
+      Model.belongs_to_associations(@model_class).each do |assoc|
+        if (value = attrs[assoc.name]) && value.is_a?(Hash)
+          attrs[assoc.name] = assoc.klass.sample(value)
+        end
+      end
       instance = model_class.create! attrs
       proxied_associations = []
       needs_another_save = false
