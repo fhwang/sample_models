@@ -16,7 +16,7 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
     create_table 'users', :force => true do |user|
-      user.string 'gender', 'homepage', 'password'
+      user.string 'email', 'gender', 'homepage', 'password'
     end
   end
 end
@@ -24,7 +24,8 @@ end
 # ============================================================================
 # Define ActiveRecord classes
 class User < ActiveRecord::Base
-  validates_inclusion_of :gender, :in => %w(f m)
+  validates_email_format_of :email
+  validates_inclusion_of    :gender, :in => %w(f m)
 end
 
 # ============================================================================
@@ -38,9 +39,28 @@ describe "Model.sample" do
     user.password.should == 'myownpassword'
   end
     
-  it 'should pick the first value given in a validates_inclusion_if' do
+  it 'should pick the first value given in a validates_inclusion_of' do
     user = User.sample
     user.gender.should == 'f'
+  end
+  
+  it "should raise the standard validation error if you break the model's validates_inclusion_of validation" do
+    lambda { User.sample(:gender => 'x') }.should raise_error(
+      ActiveRecord::RecordInvalid,
+      'Validation failed: Gender is not included in the list'
+    )
+  end
+  
+  it 'should set emails based on a validation' do
+    user = User.sample
+    user.email.should match(/^.*@.*\..*/)
+  end
+  
+  it "should raise the standard validation error if you break the model's validates_email_format_of validation" do
+    lambda { User.sample(:email => 'call.me') }.should raise_error(
+      ActiveRecord::RecordInvalid,
+      'Validation failed: Email  does not appear to be a valid e-mail address'
+    )
   end
 end
 
@@ -308,12 +328,6 @@ end
 
 # Actual specs start here ...
 describe "Model.sample" do   
-  
-  it 'should set emails based on a validation' do
-    user = User.sample
-    user.email.should match(/^.*@.*\..*/)
-  end
-  
   it 'should not override a boolean default' do
     Comment.sample.flagged_as_spam.should be_false
   end

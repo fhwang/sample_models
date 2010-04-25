@@ -36,8 +36,12 @@ module SampleModels
     
     def sample(attrs)
       @validations_hash.each do |field, validations|
-        if attrs[field].blank? and v = validations.detect(&:inclusion?)
-          attrs[field] = v.satisfying_value
+        if attrs[field].nil?
+          validations.each do |validation|
+            unless validation.allow_nil?
+              attrs[field] = validation.satisfying_value
+            end
+          end
         end
       end
       model_class.create! attrs
@@ -53,12 +57,21 @@ module SampleModels
       @fields = args
     end
     
+    def allow_nil?
+      @config[:allow_nil]
+    end
+    
     def inclusion?
       @type == :validates_inclusion_of
     end
     
     def satisfying_value
-      @config[:in].first
+      case @type
+      when :validates_email_format_of
+        "john.doe@example.com"
+      when :validates_inclusion_of
+        @config[:in].first
+      end
     end
   end
 end
