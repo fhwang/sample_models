@@ -19,6 +19,14 @@ module SampleModels
     end
   end
   
+  class Model
+    def self.belongs_to_associations(model)
+      model.reflect_on_all_associations.select { |assoc|
+        assoc.macro == :belongs_to
+      }
+    end
+  end
+  
   class Sampler
     attr_reader :model_class
     
@@ -28,7 +36,7 @@ module SampleModels
     end
     
     def record_validation(*args)
-      validation = Validation.new *args
+      validation = Validation.new @model_class, *args
       validation.fields.each do |field|
         @validations_hash[field] << validation
       end
@@ -45,23 +53,28 @@ module SampleModels
           end
         end
       end
-      belongs_to_associations = @model_class.reflect_on_all_associations.select { |assoc|
-        assoc.macro == :belongs_to
-      }
-      belongs_to_associations.each do |assoc|
-        unless attrs.has_key?(assoc.name) or
+      instance = model_class.create! attrs
+      proxied_associations = []
+      needs_another_save = false
+      Model.belongs_to_associations(@model_class).each do |assoc|
+        unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
                attrs.has_key?(assoc.association_foreign_key)
-          attrs[assoc.name] = assoc.klass.sample
+          needs_another_save = true
+          instance.send(
+            "#{assoc.name}=", assoc.klass.first || assoc.klass.sample
+          )
         end
       end
-      model_class.create! attrs
+      instance.save! if needs_another_save
+      instance
     end
   end
   
   class Validation
     attr_reader :fields
     
-    def initialize(*args)
+    def initialize(model_class, *args)
+      @model_class = model_class
       @type = args.shift
       @config = args.extract_options!
       @fields = args
@@ -81,6 +94,13 @@ module SampleModels
         "john.doe@example.com"
       when :validates_inclusion_of
         @config[:in].first
+      when :validates_presence_of
+        assoc = Model.belongs_to_associations(@model_class).detect { |a|
+          a.association_foreign_key.to_sym == @fields.first.to_sym
+        }
+        if assoc
+          assoc.klass.first || assoc.klass.sample
+        end
       end
     end
   end

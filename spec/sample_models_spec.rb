@@ -31,7 +31,8 @@ silence_stream(STDOUT) do
     end
     
     create_table 'users', :force => true do |user|
-      user.string 'email', 'gender', 'homepage', 'password'
+      user.string  'email', 'gender', 'homepage', 'password'
+      user.integer 'favorite_blog_post_id'
     end
   end
 end
@@ -43,6 +44,8 @@ end
 
 class BlogPost < ActiveRecord::Base
   belongs_to :user
+  
+  validates_presence_of :user_id
 end
 
 class Network < ActiveRecord::Base
@@ -53,6 +56,9 @@ class Show < ActiveRecord::Base
 end
 
 class User < ActiveRecord::Base
+  belongs_to :favorite_blog_post,
+             :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
+             
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
 end
@@ -110,16 +116,27 @@ describe 'Model with a belongs_to association' do
     blog_post.user.should == user
   end
   
+  it 'should set a custom value by the column name' do
+    user = User.sample
+    blog_post = BlogPost.sample :user_id => user.id
+    blog_post.user.should == user
+  end
+  
   it 'should set a custom nil value by the association name' do
     show = Show.sample :network => nil
     show.network.should    be_nil
     show.network_id.should be_nil
   end
+
+  it 'should set a custom nil value by the association name' do
+    show = Show.sample :network_id => nil
+    show.network.should    be_nil
+    show.network_id.should be_nil
+  end
   
-  it 'should set a custom value by the column name' do
-    user = User.sample
-    blog_post = BlogPost.sample :user_id => user.id
-    blog_post.user.should == user
+  it 'should have no problem with circular associations' do
+    User.sample.favorite_blog_post.is_a?(BlogPost).should be_true
+    BlogPost.sample.user.is_a?(User).should be_true
   end
 end
 
@@ -388,24 +405,6 @@ end
 # Actual specs start here ...
 
 describe 'Model with a belongs_to association' do
-  
-  it 'should set a custom value by the column name, even when the default sample has been previously set' do
-    user = User.sample
-    blog_post = BlogPost.sample :user_id => user.id
-    blog_post.user.should == user
-  end
-
-  it 'should set a custom nil value by the association name' do
-    show = Show.sample :network_id => nil
-    show.network.should    be_nil
-    show.network_id.should be_nil
-  end
-  
-  it 'should have no problem with circular associations' do
-    User.sample.favorite_blog_post.is_a?(BlogPost).should be_true
-    BlogPost.sample.user.is_a?(User).should be_true
-  end
-  
   it 'should allow creation of a custom associated instance with a hash' do
     show = Show.sample(
       :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
