@@ -15,12 +15,16 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 # Create the DB schema
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
-    create_table 'users', :force => true do |user|
-      user.string 'email', 'gender', 'homepage', 'password'
+    create_table 'blog_posts', :force => true do |blog_post|
+      blog_post.integer 'user_id'
     end
 
     create_table 'comments', :force => true do |comment|
       comment.boolean 'flagged_as_spam', :default => false
+    end
+    
+    create_table 'users', :force => true do |user|
+      user.string 'email', 'gender', 'homepage', 'password'
     end
   end
 end
@@ -28,6 +32,10 @@ end
 # ============================================================================
 # Define ActiveRecord classes
 class Comment < ActiveRecord::Base
+end
+
+class BlogPost < ActiveRecord::Base
+  belongs_to :user
 end
 
 class User < ActiveRecord::Base
@@ -72,6 +80,14 @@ describe "Model.sample" do
   
   it 'should not override a boolean default' do
     Comment.sample.flagged_as_spam.should be_false
+  end
+end
+
+describe 'Model with a belongs_to association' do
+  it 'should be associated with the belongs_to recipient by default' do
+    blog_post = BlogPost.sample
+    blog_post.user.should_not be_nil
+    blog_post.user.is_a?(User).should be_true
   end
 end
 
@@ -340,11 +356,6 @@ end
 # Actual specs start here ...
 
 describe 'Model with a belongs_to association' do
-  it 'should be associated with the belongs_to recipient by default' do
-    blog_post = BlogPost.sample
-    blog_post.user.is_a?(User).should be_true
-  end
-  
   it 'should set a custom value by the association name' do
     user = User.sample
     blog_post = BlogPost.sample :user => user

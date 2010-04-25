@@ -44,6 +44,12 @@ module SampleModels
           end
         end
       end
+      belongs_to_associations = @model_class.reflect_on_all_associations.select { |assoc|
+        assoc.macro == :belongs_to
+      }
+      belongs_to_associations.each do |assoc|
+        attrs[assoc.name] = assoc.klass.sample
+      end
       model_class.create! attrs
     end
   end
