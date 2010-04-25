@@ -1,3 +1,4 @@
+=begin
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
 
 require 'delegate'
@@ -200,3 +201,4 @@ module ActiveRecord
 end
 
 end # if RAILS_ENV == 'test'
+=end

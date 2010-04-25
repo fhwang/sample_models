@@ -11,6 +11,7 @@ config = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
 ActiveRecord::Base.logger = Logger.new(File.dirname(__FILE__) + '/debug.log')
 ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 
+=begin
 # Create the DB schema
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
@@ -679,4 +680,4 @@ describe 'Model with a has-many through association' do
     bp.tags.first.tag.should == 'funny'
   end
 end
-
+=end
