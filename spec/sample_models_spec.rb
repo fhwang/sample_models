@@ -23,6 +23,13 @@ silence_stream(STDOUT) do
       comment.boolean 'flagged_as_spam', :default => false
     end
     
+    create_table 'networks', :force => true do |network|
+    end
+    
+    create_table 'shows', :force => true do |show|
+      show.integer 'network_id'
+    end
+    
     create_table 'users', :force => true do |user|
       user.string 'email', 'gender', 'homepage', 'password'
     end
@@ -36,6 +43,13 @@ end
 
 class BlogPost < ActiveRecord::Base
   belongs_to :user
+end
+
+class Network < ActiveRecord::Base
+end
+
+class Show < ActiveRecord::Base
+  belongs_to :network
 end
 
 class User < ActiveRecord::Base
@@ -94,6 +108,12 @@ describe 'Model with a belongs_to association' do
     user = User.sample
     blog_post = BlogPost.sample :user => user
     blog_post.user.should == user
+  end
+  
+  it 'should set a custom nil value by the association name' do
+    show = Show.sample :network => nil
+    show.network.should    be_nil
+    show.network_id.should be_nil
   end
 end
 
@@ -362,17 +382,6 @@ end
 # Actual specs start here ...
 
 describe 'Model with a belongs_to association' do
-  it 'should set a custom value by the association name' do
-    user = User.sample
-    blog_post = BlogPost.sample :user => user
-    blog_post.user.should == user
-  end
-  
-  it 'should set a custom nil value by the association name' do
-    show = Show.sample :network => nil
-    show.network.should    be_nil
-    show.network_id.should be_nil
-  end
   
   it 'should set a custom value by the column name' do
     user = User.sample
