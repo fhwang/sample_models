@@ -35,6 +35,7 @@ module SampleModels
     end
     
     def sample(attrs)
+      attrs = HashWithIndifferentAccess.new attrs
       @validations_hash.each do |field, validations|
         if attrs[field].nil?
           validations.each do |validation|
@@ -48,7 +49,8 @@ module SampleModels
         assoc.macro == :belongs_to
       }
       belongs_to_associations.each do |assoc|
-        unless attrs.has_key?(assoc.name)
+        unless attrs.has_key?(assoc.name) or
+               attrs.has_key?(assoc.association_foreign_key)
           attrs[assoc.name] = assoc.klass.sample
         end
       end

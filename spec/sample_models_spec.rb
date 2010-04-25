@@ -115,6 +115,12 @@ describe 'Model with a belongs_to association' do
     show.network.should    be_nil
     show.network_id.should be_nil
   end
+  
+  it 'should set a custom value by the column name' do
+    user = User.sample
+    blog_post = BlogPost.sample :user_id => user.id
+    blog_post.user.should == user
+  end
 end
 
 
@@ -382,12 +388,6 @@ end
 # Actual specs start here ...
 
 describe 'Model with a belongs_to association' do
-  
-  it 'should set a custom value by the column name' do
-    user = User.sample
-    blog_post = BlogPost.sample :user_id => user.id
-    blog_post.user.should == user
-  end
   
   it 'should set a custom value by the column name, even when the default sample has been previously set' do
     user = User.sample
