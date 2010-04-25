@@ -63,7 +63,8 @@ module SampleModels
       needs_another_save = false
       Model.belongs_to_associations(@model_class).each do |assoc|
         unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
-               attrs.has_key?(assoc.association_foreign_key)
+               attrs.has_key?(assoc.association_foreign_key) ||
+               @model_class == assoc.klass
           needs_another_save = true
           instance.send(
             "#{assoc.name}=", assoc.klass.first || assoc.klass.sample

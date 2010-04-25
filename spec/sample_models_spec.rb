@@ -16,7 +16,7 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 silence_stream(STDOUT) do
   ActiveRecord::Schema.define do
     create_table 'blog_posts', :force => true do |blog_post|
-      blog_post.integer 'user_id'
+      blog_post.integer 'merged_into_id', 'user_id'
     end
 
     create_table 'comments', :force => true do |comment|
@@ -45,6 +45,8 @@ class Comment < ActiveRecord::Base
 end
 
 class BlogPost < ActiveRecord::Base
+  belongs_to :merged_into,
+             :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
   belongs_to :user
   
   validates_presence_of :user_id
@@ -147,6 +149,17 @@ describe 'Model with a belongs_to association' do
     )
     show.name.should == "The Daily Show"
     show.network.name.should == 'Comedy Central'
+  end
+end
+
+
+describe 'Model with a belongs_to association of the same class' do
+  before :all do
+    @blog_post = BlogPost.sample
+  end
+  
+  it 'should be nil by default' do
+    @blog_post.merged_into.should be_nil
   end
 end
 
