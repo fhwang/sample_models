@@ -89,6 +89,12 @@ describe 'Model with a belongs_to association' do
     blog_post.user.should_not be_nil
     blog_post.user.is_a?(User).should be_true
   end
+  
+  it 'should set a custom value by the association name' do
+    user = User.sample
+    blog_post = BlogPost.sample :user => user
+    blog_post.user.should == user
+  end
 end
 
 

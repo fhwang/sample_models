@@ -48,7 +48,9 @@ module SampleModels
         assoc.macro == :belongs_to
       }
       belongs_to_associations.each do |assoc|
-        attrs[assoc.name] = assoc.klass.sample
+        if attrs[assoc.name].nil?
+          attrs[assoc.name] = assoc.klass.sample
+        end
       end
       model_class.create! attrs
     end
