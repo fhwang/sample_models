@@ -32,6 +32,10 @@ module SampleModels
   end
   
   module ARClassMethods
+    def create_sample(attrs={})
+      SampleModels.samplers[self].sample attrs
+    end
+    
     def sample(attrs={})
       SampleModels.samplers[self].sample attrs
     end
@@ -81,6 +85,11 @@ module SampleModels
       instance = model_class.new attrs
       before_save.call(instance, orig_attrs) if before_save
       instance.save!
+      update_associations(instance, attrs, orig_attrs)
+      instance
+    end
+    
+    def update_associations(instance, attrs, orig_attrs)
       proxied_associations = []
       needs_another_save = false
       Model.belongs_to_associations(@model_class).each do |assoc|
@@ -97,7 +106,6 @@ module SampleModels
         before_save.call(instance, orig_attrs) if before_save
         instance.save!
       end
-      instance
     end
   end
   
@@ -109,6 +117,7 @@ module SampleModels
       @type = args.shift
       @config = args.extract_options!
       @fields = args
+      @sequence_number = 0
     end
     
     def allow_nil?
@@ -132,6 +141,9 @@ module SampleModels
         if assoc
           assoc.klass.first || assoc.klass.sample
         end
+      when :validates_uniqueness_of
+        @sequence_number += 1
+        "#{@fields.first.to_s.capitalize} #{@sequence_number}"
       end
     end
   end

@@ -39,7 +39,7 @@ silence_stream(STDOUT) do
     
     create_table 'users', :force => true do |user|
       user.integer 'favorite_blog_post_id'
-      user.string  'email', 'gender', 'homepage', 'password'
+      user.string  'email', 'gender', 'homepage', 'login', 'password'
     end
     
     create_table 'videos', :force => true do |video|
@@ -92,6 +92,7 @@ class User < ActiveRecord::Base
              
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
+  validates_uniqueness_of   :login, :case_sensitive => false
 end
 
 # ============================================================================
@@ -219,8 +220,11 @@ end
 
 describe 'Model with a redundant but validated association' do
   it 'should use before_save to reconcile instance issues' do
-    video = Video.sample :episode => {:name => 'The one about the parents'}
-    video.episode.show.should == video.show
+    video1 = Video.sample :episode => {:name => 'The one about the parents'}
+    video1.episode.show.should == video1.show
+    video2 = Video.sample :show => {:name => 'South Park'}
+    video2.episode.show.should == video2.show
+    video2.show.name.should == 'South Park'
   end
   
   it 'should not try to prefill the 2nd-hand association with another record' do
@@ -229,6 +233,20 @@ describe 'Model with a redundant but validated association' do
     )
     video = Video.sample :show => {:name => 'House'}
     video.show.name.should == 'House'
+  end
+end
+
+describe 'Model with a unique string attribute' do
+  it 'should use sequences to ensure that the attribute is unique every time you call create_sample' do
+    ids = []
+    logins = []
+    10.times do
+      custom = User.create_sample
+      ids.should_not include(custom.id)
+      ids << custom.id
+      logins.should_not include(custom.login)
+      logins << custom.login
+    end
   end
 end
 
@@ -497,15 +515,6 @@ end
 # Actual specs start here ...
 
 describe 'Model with a unique string attribute' do
-  it 'should create a random unique value each time you call create_sample' do
-    logins = {}
-    10.times do
-      custom = User.create_sample
-      logins[custom.login].should be_nil
-      logins[custom.login] = true
-    end
-  end
-  
   it 'should find the previously existing instance for repeated calls of .sample' do
     user = User.sample
     user_prime = User.sample
