@@ -23,22 +23,27 @@ silence_stream(STDOUT) do
       comment.boolean 'flagged_as_spam', :default => false
     end
     
+    create_table 'episodes', :force => true do |episode|
+      episode.integer 'show_id'
+      episode.string  'name'
+    end
+    
     create_table 'networks', :force => true do |network|
       network.string 'name'
     end
     
     create_table 'shows', :force => true do |show|
-      show.string  'name'
       show.integer 'network_id'
+      show.string  'name'
     end
     
     create_table 'users', :force => true do |user|
-      user.string  'email', 'gender', 'homepage', 'password'
       user.integer 'favorite_blog_post_id'
+      user.string  'email', 'gender', 'homepage', 'password'
     end
     
     create_table 'videos', :force => true do |video|
-      video.integer 'show_id', 'network_id'
+      video.integer 'episode_id', 'show_id', 'network_id'
     end
   end
 end
@@ -56,6 +61,12 @@ class BlogPost < ActiveRecord::Base
   validates_presence_of :user_id
 end
 
+class Episode < ActiveRecord::Base
+  belongs_to :show
+  
+  validates_presence_of :show_id
+end
+
 class Network < ActiveRecord::Base
 end
 
@@ -66,6 +77,13 @@ end
 class Video < ActiveRecord::Base
   belongs_to :show
   belongs_to :network
+  belongs_to :episode
+  
+  def validate
+    if episode && episode.show_id != show_id
+      errors.add "Video needs same show as the episode"
+    end
+  end
 end
 
 class User < ActiveRecord::Base
@@ -74,6 +92,20 @@ class User < ActiveRecord::Base
              
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
+end
+
+# ============================================================================
+# sample_models configuration
+SampleModels.configure Video do |video|
+  video.before_save { |v, sample_attrs|
+    if v.episode && v.episode.show != v.show
+      if sample_attrs[:show]
+        v.episode.show = v.show
+      else
+        v.show = v.episode.show
+      end
+    end
+  }
 end
 
 # ============================================================================
@@ -146,7 +178,7 @@ describe 'Model with a belongs_to association' do
     show.network.should    be_nil
     show.network_id.should be_nil
   end
-  
+
   it 'should have no problem with circular associations' do
     User.sample.favorite_blog_post.is_a?(BlogPost).should be_true
     BlogPost.sample.user.is_a?(User).should be_true
@@ -160,7 +192,6 @@ describe 'Model with a belongs_to association' do
     show.network.name.should == 'Comedy Central'
   end
 end
-
 
 describe 'Model with a belongs_to association of the same class' do
   before :all do
@@ -183,6 +214,21 @@ describe 'Model with a triangular belongs-to association' do
     video.show.network.should_not be_nil
     video.network.should_not be_nil
     video.show.network.should == video.network
+  end
+end
+
+describe 'Model with a redundant but validated association' do
+  it 'should use before_save to reconcile instance issues' do
+    video = Video.sample :episode => {:name => 'The one about the parents'}
+    video.episode.show.should == video.show
+  end
+  
+  it 'should not try to prefill the 2nd-hand association with another record' do
+    show = Show.sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    video = Video.sample :show => {:name => 'House'}
+    video.show.name.should == 'House'
   end
 end
 
@@ -449,19 +495,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe 'Model with a redundant but validated association' do
-  it 'should create a valid sample when the 2nd-degree association already exists' do
-    Show.destroy_all
-    Show.create! :name => 'something to take ID 1'
-    Show.create! :name => 'Test name'
-    Video.sample
-  end
-  
-  it 'should use before_save to reconcile instance issues' do
-    video = Video.sample :episode => {:name => 'The one about the parents'}
-    video.episode.show.should == video.show
-  end
-end
 
 describe 'Model with a unique string attribute' do
   it 'should create a random unique value each time you call create_sample' do

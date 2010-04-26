@@ -6,11 +6,29 @@ module SampleModels
     h[model_class] = Sampler.new(model_class)
   }
 
+  def self.configure(model_class, opts ={})
+    yield ConfigureRecipient.new(model_class) if block_given?
+  end
+
   protected
   
   def self.included( mod )
     mod.extend ARClassMethods
     super
+  end
+  
+  class ConfigureRecipient
+    def initialize(model_class)
+      @model_class = model_class
+    end
+    
+    def before_save(&proc)
+      sampler.before_save = proc
+    end
+    
+    def sampler
+      SampleModels.samplers[@model_class]
+    end
   end
   
   module ARClassMethods
@@ -28,7 +46,8 @@ module SampleModels
   end
   
   class Sampler
-    attr_reader :model_class
+    attr_accessor :before_save
+    attr_reader   :model_class
     
     def initialize(model_class)
       @model_class = model_class
@@ -43,7 +62,8 @@ module SampleModels
     end
     
     def sample(attrs)
-      attrs = HashWithIndifferentAccess.new attrs
+      orig_attrs = HashWithIndifferentAccess.new attrs
+      attrs = orig_attrs.clone
       @validations_hash.each do |field, validations|
         if attrs[field].nil?
           validations.each do |validation|
@@ -58,7 +78,9 @@ module SampleModels
           attrs[assoc.name] = assoc.klass.sample(value)
         end
       end
-      instance = model_class.create! attrs
+      instance = model_class.new attrs
+      before_save.call(instance, orig_attrs) if before_save
+      instance.save!
       proxied_associations = []
       needs_another_save = false
       Model.belongs_to_associations(@model_class).each do |assoc|
@@ -71,7 +93,10 @@ module SampleModels
           )
         end
       end
-      instance.save! if needs_another_save
+      if needs_another_save
+        before_save.call(instance, orig_attrs) if before_save
+        instance.save!
+      end
       instance
     end
   end
