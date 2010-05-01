@@ -6,11 +6,16 @@ gem 'rspec'
 require 'spec/rake/spectask'
 
 desc 'Default: run specs.'
-task :default => :spec
+task :default => [:spec, :test]
 
 desc "Run all specs"
 Spec::Rake::SpecTask.new('spec') do |t|
   t.spec_files = FileList['spec/*.rb']
+end
+
+desc "Run all tests"
+Rake::TestTask.new do |t|
+  t.test_files = FileList['test/*.rb']
 end
 
 desc 'Generate documentation for the sample_models plugin.'
