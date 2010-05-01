@@ -8,6 +8,9 @@ def describe(desc_name, &block)
     test_name = "test_" + it_name.gsub(/ /, '_')
     self.send(:define_method, test_name, &block)
   end
+  def klass.before(before_name, &block)
+    self.send(:define_method, :setup, &block)
+  end
   klass.instance_eval &block
 end
 
