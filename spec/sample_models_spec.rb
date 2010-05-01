@@ -9,48 +9,6 @@ initialize_db
 
 require File.dirname(__FILE__) + "/../spec_or_test/specs_or_test_cases"
 
-describe 'Model with a triangular belongs-to association' do
-  it 'should set unspecified association values to the same default instance' do
-    video = Video.sample :show => {:name => 'House'}
-    video.show.name.should == 'House'
-    video.show.network.should_not be_nil
-    video.network.should_not be_nil
-    video.show.network.should == video.network
-  end
-end
-
-describe 'Model with a redundant but validated association' do
-  it 'should use before_save to reconcile instance issues' do
-    video1 = Video.sample :episode => {:name => 'The one about the parents'}
-    video1.episode.show.should == video1.show
-    video2 = Video.sample :show => {:name => 'South Park'}
-    video2.episode.show.should == video2.show
-    video2.show.name.should == 'South Park'
-  end
-  
-  it 'should not try to prefill the 2nd-hand association with another record' do
-    show = Show.sample(
-      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
-    )
-    video = Video.sample :show => {:name => 'House'}
-    video.show.name.should == 'House'
-  end
-end
-
-describe 'Model with a unique string attribute' do
-  it 'should use sequences to ensure that the attribute is unique every time you call create_sample' do
-    ids = []
-    logins = []
-    10.times do
-      custom = User.create_sample
-      ids.should_not include(custom.id)
-      ids << custom.id
-      logins.should_not include(custom.login)
-      logins << custom.login
-    end
-  end
-end
-
 
 =begin
 # Create the DB schema

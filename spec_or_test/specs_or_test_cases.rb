@@ -59,7 +59,7 @@ describe 'Model with a belongs_to association' do
     assert_nil show.network_id
   end
   
-  it 'should set a custom nil value by the association name' do
+  it 'should set a custom nil value by the association ID' do
     show = Show.sample :network_id => nil
     assert_nil show.network
     assert_nil show.network_id
@@ -90,5 +90,47 @@ describe 'Model with a belongs_to association of the same class' do
   
   it 'should not be itself by default' do
     assert_not_equal @blog_post, @blog_post.merged_into
+  end
+end
+
+describe 'Model with a triangular belongs-to association' do
+  it 'should set unspecified association values to the same default instance' do
+    video = Video.sample :show => {:name => 'House'}
+    assert_equal 'House', video.show.name
+    assert video.show.network
+    assert video.network
+    assert_equal video.network, video.show.network
+  end
+end
+
+describe 'Model with a redundant but validated association' do
+  it 'should use before_save to reconcile instance issues' do
+    video1 = Video.sample :episode => {:name => 'The one about the parents'}
+    assert_equal video1.show, video1.episode.show
+    video2 = Video.sample :show => {:name => 'South Park'}
+    assert_equal video2.show, video2.episode.show
+    assert_equal 'South Park', video2.show.name
+  end
+  
+  it 'should not try to prefill the 2nd-hand association with another record' do
+    show = Show.sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    video = Video.sample :show => {:name => 'House'}
+    assert_equal 'House', video.show.name
+  end
+end
+
+describe 'Model with a unique string attribute' do
+  it 'should use sequences to ensure that the attribute is unique every time you call create_sample' do
+    ids = []
+    logins = []
+    10.times do
+      custom = User.create_sample
+      assert !ids.include?(custom.id)
+      ids << custom.id
+      assert !logins.include?(custom.login)
+      logins << custom.login
+    end
   end
 end

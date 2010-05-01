@@ -6,6 +6,9 @@ def describe(desc_name, &block)
   klass = Class.new Test::Unit::TestCase
   def klass.it(it_name, &block)
     test_name = "test_" + it_name.gsub(/ /, '_')
+    if instance_methods.include?(test_name)
+      raise "redundant describe #{it_name.inspect}"
+    end
     self.send(:define_method, test_name, &block)
   end
   def klass.before(before_name, &block)
