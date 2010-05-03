@@ -29,6 +29,11 @@ describe "Model.sample" do
     end
   end
   
+  it 'should set fields that are not validated to non-nil values' do
+    user = User.sample
+    assert_not_nil user.homepage
+  end
+  
   it 'should not override a boolean default' do
     assert !Comment.sample.flagged_as_spam
   end
@@ -194,6 +199,16 @@ describe 'Model with a configured default association' do
   end
 end
 
+describe 'Model configuration with a bad field name' do
+  it 'should raise a useful error message' do
+    assert_raises(NoMethodError) do
+      SampleModels.configure Category do |category|
+        category.default.foobar ''
+      end
+    end
+  end
+end
+
 describe 'Model with a triangular belongs-to association' do
   it 'should set unspecified association values to the same default instance' do
     video = Video.sample :show => {:name => 'House'}
@@ -201,6 +216,22 @@ describe 'Model with a triangular belongs-to association' do
     assert video.show.network
     assert video.network
     assert_equal video.network, video.show.network
+  end
+end
+
+describe 'Model configured with .force_unique' do
+  it 'should return the same instance when called twice with no custom attrs' do
+    bp1 = BlogPost.sample
+    bp2 = BlogPost.sample
+    assert_equal bp1, bp2
+    assert_equal bp1.published_at, bp2.published_at
+  end
+  
+  it 'should generated a new value for sample calls with custom attrs' do
+    bp1 = BlogPost.sample
+    bp2 = BlogPost.sample :user => {:login => 'francis'}
+    assert_not_equal bp1, bp2
+    assert_not_equal bp1.published_at, bp2.published_at
   end
 end
 

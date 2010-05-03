@@ -19,6 +19,7 @@ def initialize_db
       end
     
       create_table 'blog_posts', :force => true do |blog_post|
+        blog_post.datetime 'published_at'
         blog_post.integer 'merged_into_id', 'user_id'
       end
 
@@ -137,8 +138,12 @@ end
 
 # ============================================================================
 # sample_models configuration
+SampleModels.configure BlogPost do |bp|
+  bp.published_at.force_unique
+end
+
 SampleModels.configure Category do |category|
-  category.default.parent nil
+  category.parent.default nil
 end
 
 SampleModels.configure Video do |video|

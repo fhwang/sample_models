@@ -22,46 +22,31 @@ module SampleModels
   class ConfigureRecipient
     def initialize(model_class)
       @model_class = model_class
-      @default_recipient = Default.new @model_class
     end
     
     def before_save(&proc)
       sampler.before_save = proc
     end
     
-    def default
-      @default_recipient
+    def method_missing(meth, *args)
+      Attribute.new(sampler, meth)
     end
-
+    
     def sampler
       SampleModels.samplers[@model_class]
     end
     
-    class Default
-      def initialize(model_class)
-        @model_class = model_class
+    class Attribute
+      def initialize(sampler, attribute)
+        @sampler, @attribute = sampler, attribute
       end
       
-      def method_missing(meth, *args)
-        if @model_class.column_names.include?( meth.to_s ) or
-           sampler.belongs_to_assoc_for(meth) or
-           @model_class.public_method_defined?("#{meth}=")
-          default = if args.size == 1
-            args.first
-          else
-            Proc.new do; yield; end
-          end
-          sampler.configured_default_attrs[meth] = default
-        else
-          raise(
-            NoMethodError,
-            "undefined method `#{meth}' for #{@model_class.name}"
-          )
-        end
+      def default(default)
+        @sampler.configured_default_attrs[@attribute] = default
       end
       
-      def sampler
-        SampleModels.samplers[@model_class]
+      def force_unique
+        @sampler.record_validation :validates_uniqueness_of, @attribute
       end
     end
   end

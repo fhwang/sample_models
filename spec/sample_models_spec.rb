@@ -272,43 +272,7 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-
-describe 'Model configuration with a bad field name' do
-  it 'should raise a useful error message' do
-    lambda {
-      SampleModels.configure BadSample do |b|
-        b.default.foobar ''
-      end
-    }.should raise_error(
-      NoMethodError, /undefined method `foobar' for BadSample/
-    )
-  end
-end
-
-describe 'Model with an attr_accessor' do
-  it 'should returned the default configured value' do
-    ThisOrThat.sample.or_the_other.should == 'something else'
-  end
-  
-  it 'should override for a custom sample' do
-    custom = ThisOrThat.sample :or_the_other => 'hello world'
-    custom.or_the_other.should == 'hello world'
-  end
-end
-
 describe 'Model configured with .force_unique' do
-  it 'should return the same instance when called twice with no custom attrs' do
-    bp1 = BlogPost.sample
-    bp1.title.should == 'Test title'
-    bp2 = BlogPost.sample
-    bp2.title.should == bp1.title
-    bp2.should == bp1
-  end
-  
-  it 'should generated a new value for sample calls with custom attrs' do
-    bp = BlogPost.sample :user => {:login => 'francis'}
-    bp.title.should_not == 'Test title'
-  end
   
   it 'should allow nil uniqued attribute if the model allows' do
     video = Video.sample :featured_at => nil
