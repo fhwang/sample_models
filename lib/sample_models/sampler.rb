@@ -29,7 +29,7 @@ module SampleModels
       orig_attrs = HashWithIndifferentAccess.new attrs
       attrs = orig_attrs.clone
       @validation_collections.each do |field, validation_collection|
-        if attrs[field].nil?
+        unless attrs.has_key?(field)
           attrs[field] = validation_collection.satisfying_value
         end
       end

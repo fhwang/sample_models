@@ -274,11 +274,6 @@ end
 # Actual specs start here ...
 describe 'Model configured with .force_unique' do
   
-  it 'should allow nil uniqued attribute if the model allows' do
-    video = Video.sample :featured_at => nil
-    video.featured_at.should be_nil
-  end
-  
   it 'should not get confused by a previous record and nil uniqued attributes' do
     Video.destroy_all
     prev_video = Video.create! :featured_at => Date.today

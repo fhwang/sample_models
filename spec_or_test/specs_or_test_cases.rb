@@ -233,6 +233,11 @@ describe 'Model configured with .force_unique' do
     assert_not_equal bp1, bp2
     assert_not_equal bp1.published_at, bp2.published_at
   end
+  
+  it 'should allow nil uniqued attribute if the model allows it' do
+    bp = BlogPost.sample :published_at => nil
+    assert_nil bp.published_at
+  end
 end
 
 describe 'Model with a redundant but validated association' do
