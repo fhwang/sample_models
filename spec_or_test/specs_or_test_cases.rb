@@ -32,6 +32,46 @@ describe "Model.sample" do
   it 'should not override a boolean default' do
     assert !Comment.sample.flagged_as_spam
   end
+  
+  it 'should return the same instance with two consecutive calls without arguments' do
+    user1 = User.sample
+    user2 = User.sample
+    assert_equal user1, user2
+    assert_equal user1.login, user2.login
+  end
+  
+  it 'should return the same instance with two consecutive calls with the same arguments' do
+    user1 = User.sample :homepage => 'http://john.doe.com/'
+    user2 = User.sample :homepage => 'http://john.doe.com/'
+    assert_equal user1, user2
+    assert_equal user1.login, user2.login
+  end
+  
+  it 'should return different instances with two consecutive calls with different arguments' do
+    user1 = User.sample :homepage => 'http://john.doe.com/'
+    user2 = User.sample :homepage => 'http://jane.doe.com/'
+    assert_not_equal user1, user2
+    assert_not_equal user1.login, user2.login
+  end
+
+=begin
+  it 'should return a different instance to a later call with more specific attributes' do
+    user1 = User.sample
+    user2 = User.sample :homepage => 'http://john.doe.com/'
+    user1.should_not == user2
+    user1.login.should_not == user2.login
+  end
+  
+  it 'should return the same instance to a later call with less specific attributes' do
+    user1 = User.sample(
+      :homepage => 'http://mysite.com/', :password => 'myownpassword'
+    )
+    user2 = User.sample :homepage => 'http://mysite.com/'
+    user2.should == user1
+    user3 = User.sample
+    user3.should == user1
+  end
+=end
 end
 
 describe 'Model with a belongs_to association' do
@@ -47,18 +87,37 @@ describe 'Model with a belongs_to association' do
     assert_equal user, blog_post.user
   end
   
+  it 'should return the same instance with two consecutive calls with the same associated value' do
+    user = User.sample
+    blog_post1 = BlogPost.sample :user => user
+    blog_post2 = BlogPost.sample :user => user
+    assert_equal blog_post1, blog_post2
+  end
+  
   it 'should set a custom value by the column name' do
     user = User.sample
     blog_post = BlogPost.sample :user_id => user.id
     assert_equal user, blog_post.user
   end
-  
+
   it 'should set a custom nil value by the association name' do
     show = Show.sample :network => nil
     assert_nil show.network
     assert_nil show.network_id
   end
   
+  it 'should set a custom nil value by the association name, even when there has been a previously created record with default attributes' do
+    show1 = Show.sample
+    show2 = Show.sample :network => nil
+    assert_nil show2.network
+  end
+  
+  it 'should set a custom nil value by the association name, even when there has been a previously created record with that association assigned' do
+    show1 = Show.sample :network => Network.sample
+    show2 = Show.sample :network => nil
+    assert_nil show2.network
+  end
+
   it 'should set a custom nil value by the association ID' do
     show = Show.sample :network_id => nil
     assert_nil show.network
@@ -76,6 +135,22 @@ describe 'Model with a belongs_to association' do
     )
     assert_equal "The Daily Show", show.name
     assert_equal 'Comedy Central', show.network.name
+  end
+  
+  it 'should return the same instance with two consecutive calls with the same association hash' do
+    show1 = Show.sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    show2 = Show.sample(
+      :name => 'The Daily Show', :network => {:name => 'Comedy Central'}
+    )
+    assert_equal show1, show2
+  end
+  
+  it 'should return different instances when passed different association hashes' do
+    show1 = Show.sample :network => {:name => 'Comedy Central'}
+    show2 = Show.sample :network => {:name => 'MTV'}
+    assert_not_equal show1, show2 
   end
 end
 
@@ -133,4 +208,17 @@ describe 'Model with a unique string attribute' do
       logins << custom.login
     end
   end
+  
+=begin
+  it 'should raise an error if you try to make two different instances with the same string value' do
+    User.sample :login => 'john_doe'
+    lambda {
+      User.sample(:login => 'john_doe', :homepage => 'http://john.doe.com/')
+    }.should raise_error(
+      SampleModels::BadSample,
+      "Can't create another User with login \"john_doe\""
+    )
+  end
+=end
 end
+

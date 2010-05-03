@@ -33,7 +33,7 @@ module SampleModels
   
   module ARClassMethods
     def create_sample(attrs={})
-      SampleModels.samplers[self].sample attrs
+      SampleModels.samplers[self].create_sample attrs
     end
     
     def sample(attrs={})
@@ -58,14 +58,8 @@ module SampleModels
       @validations_hash = Hash.new { |h, field| h[field] = [] }
     end
     
-    def record_validation(*args)
-      validation = Validation.new @model_class, *args
-      validation.fields.each do |field|
-        @validations_hash[field] << validation
-      end
-    end
-    
-    def sample(attrs)
+    def create_sample(attrs)
+      attrs = reify_association_hashes attrs
       orig_attrs = HashWithIndifferentAccess.new attrs
       attrs = orig_attrs.clone
       @validations_hash.each do |field, validations|
@@ -77,15 +71,52 @@ module SampleModels
           end
         end
       end
-      Model.belongs_to_associations(@model_class).each do |assoc|
-        if (value = attrs[assoc.name]) && value.is_a?(Hash)
-          attrs[assoc.name] = assoc.klass.sample(value)
-        end
-      end
       instance = model_class.new attrs
       before_save.call(instance, orig_attrs) if before_save
       instance.save!
       update_associations(instance, attrs, orig_attrs)
+      instance
+    end
+    
+    def record_validation(*args)
+      validation = Validation.new @model_class, *args
+      validation.fields.each do |field|
+        @validations_hash[field] << validation
+      end
+    end
+    
+    def reify_association_hashes(attrs)
+      a = attrs.clone
+      Model.belongs_to_associations(@model_class).each do |assoc|
+        if (value = a[assoc.name]) && value.is_a?(Hash)
+          a[assoc.name] = assoc.klass.sample(value)
+        end
+      end
+      a
+    end
+    
+    def sample(attrs)
+      attrs = reify_association_hashes attrs
+      attrs = HashWithIndifferentAccess.new attrs
+      find_attributes = {}
+      attrs.each do |k,v|
+        if @model_class.column_names.include?(k.to_s)
+          find_attributes[k] = v
+        end
+      end
+      Model.belongs_to_associations(@model_class).each do |assoc|
+        if attrs.keys.include?(assoc.name.to_s)
+          find_attributes[assoc.association_foreign_key] = if attrs[assoc.name]
+            attrs[assoc.name].id
+          else
+            attrs[assoc.name]
+          end
+        end
+      end
+      instance = @model_class.first :conditions => find_attributes
+      unless instance
+        instance = create_sample attrs
+      end
       instance
     end
     
@@ -145,6 +176,10 @@ module SampleModels
         @sequence_number += 1
         "#{@fields.first.to_s.capitalize} #{@sequence_number}"
       end
+    end
+    
+    def uniqueness?
+      @type == :validates_uniqueness_of
     end
   end
 end
