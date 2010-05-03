@@ -1,5 +1,7 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
   
+require "#{File.dirname(__FILE__)}/sample_models/sampler"
+
 module SampleModels
   mattr_reader   :samplers
   @@samplers = Hash.new { |h, model_class|
@@ -49,105 +51,6 @@ module SampleModels
     end
   end
   
-  class Sampler
-    attr_accessor :before_save
-    attr_reader   :model_class
-    
-    def initialize(model_class)
-      @model_class = model_class
-      @validation_collections = Hash.new { |h,k|
-        h[k] = ValidationCollection.new(@model_class, k)
-      }
-    end
-    
-    def create_sample(attrs)
-      attrs = reify_association_hashes attrs
-      orig_attrs = HashWithIndifferentAccess.new attrs
-      attrs = orig_attrs.clone
-      @validation_collections.each do |field, validation_collection|
-        if attrs[field].nil?
-          attrs[field] = validation_collection.satisfying_value
-        end
-      end
-      instance = model_class.new attrs
-      before_save.call(instance, orig_attrs) if before_save
-      instance.save!
-      update_associations(instance, attrs, orig_attrs)
-      instance
-    end
-    
-    def record_validation(*args)
-      type = args.shift
-      config = args.extract_options!
-      fields = args
-      fields.each do |field|
-        @validation_collections[field].add(type, config)
-      end
-    end
-    
-    def reify_association_hashes(attrs)
-      a = attrs.clone
-      Model.belongs_to_associations(@model_class).each do |assoc|
-        if (value = a[assoc.name]) && value.is_a?(Hash)
-          a[assoc.name] = assoc.klass.sample(value)
-        end
-      end
-      a
-    end
-    
-    def sample(attrs)
-      attrs = reify_association_hashes attrs
-      attrs = HashWithIndifferentAccess.new attrs
-      find_attributes = {}
-      attrs.each do |k,v|
-        if @model_class.column_names.include?(k.to_s)
-          find_attributes[k] = v
-        end
-      end
-      Model.belongs_to_associations(@model_class).each do |assoc|
-        if attrs.keys.include?(assoc.name.to_s)
-          find_attributes[assoc.association_foreign_key] = if attrs[assoc.name]
-            attrs[assoc.name].id
-          else
-            attrs[assoc.name]
-          end
-        end
-      end
-      instance = @model_class.first :conditions => find_attributes
-      if instance
-        needs_save = false
-        Model.belongs_to_associations(@model_class).each do |assoc|
-          if instance.send(assoc.primary_key_name) && 
-             !instance.send(assoc.name)
-           instance.send("#{assoc.name}=", assoc.klass.sample)
-          end
-        end
-      else
-        instance = create_sample attrs
-      end
-      instance
-    end
-    
-    def update_associations(instance, attrs, orig_attrs)
-      proxied_associations = []
-      needs_another_save = false
-      Model.belongs_to_associations(@model_class).each do |assoc|
-        unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
-               attrs.has_key?(assoc.association_foreign_key) ||
-               @model_class == assoc.klass
-          needs_another_save = true
-          instance.send(
-            "#{assoc.name}=", assoc.klass.first || assoc.klass.sample
-          )
-        end
-      end
-      if needs_another_save
-        before_save.call(instance, orig_attrs) if before_save
-        instance.save!
-      end
-    end
-  end
-  
   class ValidationCollection
     def initialize(model_class, field)
       @model_class, @field = model_class, field
@@ -163,27 +66,34 @@ module SampleModels
       @model_class.columns.detect { |c| c.name == @field.to_s }
     end
     
+    def includes_uniqueness?
+      @validations.has_key?(:validates_uniqueness_of)
+    end
+    
     def satisfying_value
-      if @validations.has_key?(:validates_uniqueness_of)
-        @sequence_number += 1
-      end
+      @sequence_number += 1 if includes_uniqueness?
       value = nil
       @validations.each do |type, config|
-        value = case type
+        case type
         when :validates_email_format_of
-          "john.doe#{@sequence_number}@example.com"
+          value = "john.doe#{@sequence_number}@example.com"
         when :validates_inclusion_of
-          config[:in].first
+          value = config[:in].first
         when :validates_presence_of
           assoc = Model.belongs_to_associations(@model_class).detect { |a|
             a.association_foreign_key.to_sym == @field.to_sym
           }
-          if assoc
-            assoc.klass.first || assoc.klass.sample
+          value = if assoc
+            if includes_uniqueness?
+              assoc.klass.create_sample
+            else
+              assoc.klass.first || assoc.klass.sample
+            end
           end
+          value = value.id if value
         end
       end
-      if value.nil? && @validations.has_key?(:validates_uniqueness_of)
+      if value.nil? && includes_uniqueness?
         value = if column.type == :string
           "#{@field.to_s.capitalize} #{@sequence_number}"
         elsif column.type == :datetime

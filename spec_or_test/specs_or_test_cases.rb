@@ -203,6 +203,17 @@ describe 'Model with a redundant but validated association' do
   end
 end
 
+describe 'Model with a unique associated attribute' do
+  it 'should ensure that the attribute is unique every time you call create_sample' do
+    video_ids = {}
+    10.times do
+      created = VideoTakedownEvent.create_sample
+      assert_nil video_ids[created.video_id]
+      video_ids[created.video_id] = true
+    end
+  end
+end
+
 describe 'Model with a unique string attribute' do
   it 'should use sequences to ensure that the attribute is unique every time you call create_sample' do
     ids = []

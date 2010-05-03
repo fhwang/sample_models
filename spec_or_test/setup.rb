@@ -48,6 +48,10 @@ def initialize_db
       create_table 'videos', :force => true do |video|
         video.integer 'episode_id', 'show_id', 'network_id'
       end
+    
+      create_table 'video_takedown_events', :force => true do |vte|
+        vte.integer 'video_id'
+      end
     end
   end
 end
@@ -82,6 +86,15 @@ class Show < ActiveRecord::Base
   belongs_to :network
 end
 
+class User < ActiveRecord::Base
+  belongs_to :favorite_blog_post,
+             :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
+             
+  validates_email_format_of :email
+  validates_inclusion_of    :gender, :in => %w(f m)
+  validates_uniqueness_of   :email, :login, :case_sensitive => false
+end
+
 class Video < ActiveRecord::Base
   belongs_to :show
   belongs_to :network
@@ -94,13 +107,11 @@ class Video < ActiveRecord::Base
   end
 end
 
-class User < ActiveRecord::Base
-  belongs_to :favorite_blog_post,
-             :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
-             
-  validates_email_format_of :email
-  validates_inclusion_of    :gender, :in => %w(f m)
-  validates_uniqueness_of   :email, :login, :case_sensitive => false
+class VideoTakedownEvent < ActiveRecord::Base
+  belongs_to :video
+  
+  validates_presence_of   :video_id
+  validates_uniqueness_of :video_id
 end
 
 # ============================================================================

@@ -273,17 +273,6 @@ end
 
 # Actual specs start here ...
 
-describe 'Model with a unique associated attribute' do
-  it 'should create a random unique associated record each time you call create_sample' do
-    video_ids = {}
-    10.times do
-      created = VideoTakedownEvent.create_sample
-      video_ids[created.video_id].should be_nil
-      video_ids[created.video_id] = true
-    end
-  end
-end
-
 describe 'Model with a unique scoped associated attribute' do
   it 'should create a new instance when you create_sample with the same scope variable as before' do
     video_fav1 = VideoFavorite.sample
