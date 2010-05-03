@@ -100,7 +100,7 @@ class User < ActiveRecord::Base
              
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
-  validates_uniqueness_of   :login, :case_sensitive => false
+  validates_uniqueness_of   :email, :login, :case_sensitive => false
 end
 
 # ============================================================================

@@ -241,3 +241,13 @@ describe 'Model with a unique time attribute' do
   end
 end
 
+describe 'Model with email and uniqueness validations on the same field' do
+  it 'should be able to create a value that satisfies both validations' do
+    emails = {}
+    10.times do
+      custom = User.create_sample
+      assert emails[custom.email].nil?
+      emails[custom.email] = true
+    end
+  end
+end

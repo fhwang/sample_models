@@ -9,8 +9,10 @@ desc 'Default: run specs.'
 task :default => [:test, :spec]
 
 desc "Run all specs"
-Spec::Rake::SpecTask.new('spec') do |t|
-  t.spec_files = FileList['spec/*.rb']
+task :spec do
+  cmd = "spec spec/sample_models_spec.rb"
+  puts cmd
+  puts `#{cmd}`
 end
 
 desc "Run all tests"

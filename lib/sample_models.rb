@@ -55,20 +55,18 @@ module SampleModels
     
     def initialize(model_class)
       @model_class = model_class
-      @validations_hash = Hash.new { |h, field| h[field] = [] }
+      @validation_collections = Hash.new { |h,k|
+        h[k] = ValidationCollection.new(@model_class, k)
+      }
     end
     
     def create_sample(attrs)
       attrs = reify_association_hashes attrs
       orig_attrs = HashWithIndifferentAccess.new attrs
       attrs = orig_attrs.clone
-      @validations_hash.each do |field, validations|
+      @validation_collections.each do |field, validation_collection|
         if attrs[field].nil?
-          validations.each do |validation|
-            unless validation.allow_nil?
-              attrs[field] = validation.satisfying_value
-            end
-          end
+          attrs[field] = validation_collection.satisfying_value
         end
       end
       instance = model_class.new attrs
@@ -79,9 +77,11 @@ module SampleModels
     end
     
     def record_validation(*args)
-      validation = Validation.new @model_class, *args
-      validation.fields.each do |field|
-        @validations_hash[field] << validation
+      type = args.shift
+      config = args.extract_options!
+      fields = args
+      fields.each do |field|
+        @validation_collections[field].add(type, config)
       end
     end
     
@@ -148,54 +148,49 @@ module SampleModels
     end
   end
   
-  class Validation
-    attr_reader :fields
-    
-    def initialize(model_class, *args)
-      @model_class = model_class
-      @type = args.shift
-      @config = args.extract_options!
-      @fields = args
+  class ValidationCollection
+    def initialize(model_class, field)
+      @model_class, @field = model_class, field
       @sequence_number = 0
+      @validations = {}
     end
     
-    def allow_nil?
-      @config[:allow_nil]
+    def add(type, config)
+      @validations[type] = config
     end
     
     def column
-      @model_class.columns.detect { |c| c.name == @fields.first.to_s }
-    end
-    
-    def inclusion?
-      @type == :validates_inclusion_of
+      @model_class.columns.detect { |c| c.name == @field.to_s }
     end
     
     def satisfying_value
-      case @type
-      when :validates_email_format_of
-        "john.doe@example.com"
-      when :validates_inclusion_of
-        @config[:in].first
-      when :validates_presence_of
-        assoc = Model.belongs_to_associations(@model_class).detect { |a|
-          a.association_foreign_key.to_sym == @fields.first.to_sym
-        }
-        if assoc
-          assoc.klass.first || assoc.klass.sample
-        end
-      when :validates_uniqueness_of
+      if @validations.has_key?(:validates_uniqueness_of)
         @sequence_number += 1
-        if column.type == :string
-          "#{@fields.first.to_s.capitalize} #{@sequence_number}"
+      end
+      value = nil
+      @validations.each do |type, config|
+        value = case type
+        when :validates_email_format_of
+          "john.doe#{@sequence_number}@example.com"
+        when :validates_inclusion_of
+          config[:in].first
+        when :validates_presence_of
+          assoc = Model.belongs_to_associations(@model_class).detect { |a|
+            a.association_foreign_key.to_sym == @field.to_sym
+          }
+          if assoc
+            assoc.klass.first || assoc.klass.sample
+          end
+        end
+      end
+      if value.nil? && @validations.has_key?(:validates_uniqueness_of)
+        value = if column.type == :string
+          "#{@field.to_s.capitalize} #{@sequence_number}"
         elsif column.type == :datetime
           Time.utc(1970, 1, 1) + @sequence_number.days
         end
       end
-    end
-    
-    def uniqueness?
-      @type == :validates_uniqueness_of
+      value
     end
   end
 end
