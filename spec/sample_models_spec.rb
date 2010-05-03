@@ -272,31 +272,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe 'Model configured with .force_unique' do
-  
-  it 'should not get confused by a previous record and nil uniqued attributes' do
-    Video.destroy_all
-    prev_video = Video.create! :featured_at => Date.today
-    new_video = Video.sample :featured_at => nil, :name => 'my own name'
-    new_video.id.should_not == prev_video.id
-    new_video.featured_at.should be_nil
-    new_video.name.should == 'my own name'
-    new_video.reload
-    new_video.featured_at.should be_nil
-    new_video.name.should == 'my own name'
-  end
-end
-
-describe 'SampleModels::Attributes' do
-  it 'should work with before_save, associations, and foreign keys' do
-    attributes = SampleModels::Attributes.new(
-      ThisOrThat, false, :network => Network.sample, :show => nil
-    )
-    attributes.required.has_key?(:network_id).should be_false
-    attributes.required[:network].should_not be_nil
-  end
-end
-
 describe "Model when its default associated record has been deleted" do
   it 'should just create a new one' do
     ep1 = Episode.sample :name => 'funny'

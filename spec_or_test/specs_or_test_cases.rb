@@ -256,6 +256,15 @@ describe 'Model with a redundant but validated association' do
     video = Video.sample :show => {:name => 'House'}
     assert_equal 'House', video.show.name
   end
+  
+  it 'should handle destroys gracefully' do
+    v1 = Video.sample
+    v1.show.destroy
+    v2 = Video.create_sample
+    assert_not_nil v2.show
+    assert_not_nil v2.episode.show
+    assert_equal v2.show, v2.episode.show
+  end
 end
 
 describe 'Model with a unique associated attribute' do
@@ -327,3 +336,13 @@ describe 'Model with email and uniqueness validations on the same field' do
     end
   end
 end
+
+describe "Model when its default associated record has been deleted" do
+  it 'should just create a new one' do
+    ep1 = Episode.sample :name => 'funny'
+    ep1.show.destroy
+    ep2 = Episode.sample :name => 'funnier'
+    assert_not_nil ep2.show
+  end
+end
+

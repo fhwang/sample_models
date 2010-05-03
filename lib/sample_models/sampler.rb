@@ -100,9 +100,7 @@ module SampleModels
                attrs.has_key?(assoc.association_foreign_key) ||
                @model_class == assoc.klass
           needs_another_save = true
-          instance.send(
-            "#{assoc.name}=", assoc.klass.first || assoc.klass.sample
-          )
+          instance.send("#{assoc.name}=", assoc.klass.sample)
         end
       end
       if needs_another_save
