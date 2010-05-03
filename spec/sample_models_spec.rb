@@ -273,16 +273,6 @@ end
 
 # Actual specs start here ...
 
-describe 'Model with a unique scoped associated attribute' do
-  it 'should create a new instance when you create_sample with the same scope variable as before' do
-    video_fav1 = VideoFavorite.sample
-    video_fav2 = VideoFavorite.create_sample :user => video_fav1.user
-    video_fav1.should_not == video_fav2
-    video_fav1.user.should == video_fav2.user
-    video_fav1.video.should_not == video_fav2.video
-  end
-end
-
 describe 'Model configuration with a bad field name' do
   it 'should raise a useful error message' do
     lambda {
@@ -292,50 +282,6 @@ describe 'Model configuration with a bad field name' do
     }.should raise_error(
       NoMethodError, /undefined method `foobar' for BadSample/
     )
-  end
-end
-
-describe 'Model with :force_on_create' do
-  it 'should create with that association, instead of creating without and then updating after' do
-    this_or_that = ThisOrThat.sample
-    this_or_that.network.should be_nil
-    this_or_that.show.should_not be_nil
-  end
-  
-  it 'should allow a custom sample for the forced assoc' do
-    show = Show.sample
-    this_or_that = ThisOrThat.sample :show => show
-    this_or_that.show.should == show
-  end
-  
-  it 'should work with before_save, associations, and foreign keys' do
-    this_or_that = ThisOrThat.sample :network => Network.sample, :show => nil
-    this_or_that.show.should be_nil
-    this_or_that.network.should_not be_nil
-  end
-
-  it "should choose the same instance for the forced association even if other associations are customized" do
-    forced = ForceNetworkOnCreate.sample(
-      :show => {:name => 'Arrested Development'}
-    )
-    forced.network.should_not be_nil
-    forced.network.should == forced.show.network
-  end
-  
-  it 'should allow you to set that association to nil' do
-    forced = ForceNetworkOnCreate.sample :network => nil
-    forced.network.should be_nil
-  end
-  
-  it 'should let you customize the forced association' do
-    forced = ForceNetworkOnCreate.sample :network => {:name => 'VH1'}
-    forced.network.name.should == 'VH1'
-  end
-  
-  it 'should let you customize the forced association by ID' do
-    bravo = Network.sample :name => 'Bravo'
-    forced = ForceNetworkOnCreate.sample :network_id => bravo.id
-    forced.network.name.should == 'Bravo'
   end
 end
 

@@ -175,6 +175,25 @@ describe 'Model with a belongs_to association of the same class' do
   end
 end
 
+describe 'Model with a configured default association' do
+  it 'should use that default' do
+    cat = Category.sample
+    assert_nil cat.parent
+  end
+  
+  it 'should allow that default to be overridden by name' do
+    sports = Category.sample :name => 'Sports'
+    soccer = Category.sample :name => 'Soccer', :parent => sports
+    assert_equal sports, soccer.parent
+  end
+  
+  it 'should allow that default to be overridden by ID' do
+    sports = Category.sample :name => 'Sports'
+    soccer = Category.sample :name => 'Soccer', :parent_id => sports.id
+    assert_equal sports, soccer.parent
+  end
+end
+
 describe 'Model with a triangular belongs-to association' do
   it 'should set unspecified association values to the same default instance' do
     video = Video.sample :show => {:name => 'House'}
@@ -211,6 +230,16 @@ describe 'Model with a unique associated attribute' do
       assert_nil video_ids[created.video_id]
       video_ids[created.video_id] = true
     end
+  end
+end
+
+describe 'Model with a unique scoped associated attribute' do
+  it 'should create a new instance when you create_sample with the same scope variable as before' do
+    video_fav1 = VideoFavorite.sample
+    video_fav2 = VideoFavorite.create_sample :user => video_fav1.user
+    assert_not_equal video_fav1, video_fav2
+    assert_equal video_fav1.user, video_fav2.user
+    assert_not_equal video_fav1.video, video_fav2.video
   end
 end
 

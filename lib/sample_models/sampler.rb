@@ -1,12 +1,26 @@
 module SampleModels
   class Sampler
     attr_accessor :before_save
-    attr_reader   :model_class
+    attr_reader   :configured_default_attrs, :model_class
     
     def initialize(model_class)
       @model_class = model_class
+      @configured_default_attrs = {}
       @validation_collections = Hash.new { |h,k|
         h[k] = ValidationCollection.new(@model_class, k)
+      }
+    end
+    
+    def belongs_to_assoc_for(column_or_name)
+      name_to_match = nil
+      if column_or_name.is_a?(String) or column_or_name.is_a?(Symbol)
+        name_to_match = column_or_name.to_sym
+      else
+        name_to_match = column_or_name.name.to_sym
+      end
+      Model.belongs_to_associations(@model_class).detect { |a|
+        a.name.to_sym == name_to_match ||
+        a.primary_key_name.to_sym == name_to_match
       }
     end
     
@@ -56,7 +70,7 @@ module SampleModels
       end
       Model.belongs_to_associations(@model_class).each do |assoc|
         if attrs.keys.include?(assoc.name.to_s)
-          find_attributes[assoc.association_foreign_key] = if attrs[assoc.name]
+          find_attributes[assoc.primary_key_name] = if attrs[assoc.name]
             attrs[assoc.name].id
           else
             attrs[assoc.name]

@@ -21,6 +21,11 @@ def initialize_db
       create_table 'blog_posts', :force => true do |blog_post|
         blog_post.integer 'merged_into_id', 'user_id'
       end
+
+      create_table 'categories', :force => true do |category|
+        category.string  'name'
+        category.integer 'parent_id'
+      end
   
       create_table 'comments', :force => true do |comment|
         comment.boolean 'flagged_as_spam', :default => false
@@ -49,6 +54,10 @@ def initialize_db
         video.integer 'episode_id', 'show_id', 'network_id'
       end
     
+      create_table 'video_favorites', :force => true do |video_favorite|
+        video_favorite.integer 'user_id', 'video_id'
+      end
+    
       create_table 'video_takedown_events', :force => true do |vte|
         vte.integer 'video_id'
       end
@@ -60,6 +69,10 @@ end
 # Define ActiveRecord classes
 class Appointment < ActiveRecord::Base
   validates_uniqueness_of :time
+end
+
+class Category < ActiveRecord::Base
+  belongs_to :parent, :class_name => 'Category'
 end
 
 class Comment < ActiveRecord::Base
@@ -89,7 +102,7 @@ end
 class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
-             
+
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
   validates_uniqueness_of   :email, :login, :case_sensitive => false
@@ -107,6 +120,14 @@ class Video < ActiveRecord::Base
   end
 end
 
+class VideoFavorite < ActiveRecord::Base
+  belongs_to :video
+  belongs_to :user
+  
+  validates_presence_of :user_id, :video_id
+  validates_uniqueness_of :video_id, :scope => :user_id
+end
+
 class VideoTakedownEvent < ActiveRecord::Base
   belongs_to :video
   
@@ -116,6 +137,10 @@ end
 
 # ============================================================================
 # sample_models configuration
+SampleModels.configure Category do |category|
+  category.default.parent nil
+end
+
 SampleModels.configure Video do |video|
   video.before_save { |v, sample_attrs|
     if v.episode && v.episode.show != v.show
