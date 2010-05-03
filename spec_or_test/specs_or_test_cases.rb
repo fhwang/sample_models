@@ -54,24 +54,23 @@ describe "Model.sample" do
     assert_not_equal user1.login, user2.login
   end
 
-=begin
   it 'should return a different instance to a later call with more specific attributes' do
     user1 = User.sample
     user2 = User.sample :homepage => 'http://john.doe.com/'
-    user1.should_not == user2
-    user1.login.should_not == user2.login
+    assert_not_equal user1, user2
+    assert_not_equal user1.login, user2.login
   end
-  
+
   it 'should return the same instance to a later call with less specific attributes' do
+    User.destroy_all
     user1 = User.sample(
       :homepage => 'http://mysite.com/', :password => 'myownpassword'
     )
     user2 = User.sample :homepage => 'http://mysite.com/'
-    user2.should == user1
+    assert_equal user1, user2
     user3 = User.sample
-    user3.should == user1
+    assert_equal user1, user3
   end
-=end
 end
 
 describe 'Model with a belongs_to association' do
@@ -80,7 +79,7 @@ describe 'Model with a belongs_to association' do
     assert blog_post.user
     assert blog_post.user.is_a?(User)
   end
-  
+
   it 'should set a custom value by the association name' do
     user = User.sample
     blog_post = BlogPost.sample :user => user
@@ -152,6 +151,14 @@ describe 'Model with a belongs_to association' do
     show2 = Show.sample :network => {:name => 'MTV'}
     assert_not_equal show1, show2 
   end
+  
+  it 'should gracefully handle destruction of an associated value' do
+    blog_post1 = BlogPost.sample
+    assert blog_post1.user
+    User.destroy_all
+    blog_post2 = BlogPost.sample
+    assert blog_post2.user
+  end
 end
 
 describe 'Model with a belongs_to association of the same class' do
@@ -209,16 +216,28 @@ describe 'Model with a unique string attribute' do
     end
   end
   
-=begin
+  it 'should return the same instance if you use the same unique attribute each time' do
+    user1 = User.sample :login => 'john_doe'
+    user2 = User.sample :login => 'john_doe'
+    assert_equal user1, user2
+  end
+  
   it 'should raise an error if you try to make two different instances with the same string value' do
     User.sample :login => 'john_doe'
-    lambda {
+    assert_raise(ActiveRecord::RecordInvalid) do
       User.sample(:login => 'john_doe', :homepage => 'http://john.doe.com/')
-    }.should raise_error(
-      SampleModels::BadSample,
-      "Can't create another User with login \"john_doe\""
-    )
+    end
   end
-=end
+end
+
+describe 'Model with a unique time attribute' do
+  it 'should use sequences to ensure that the attribute is unique every time you call create_sample' do
+    times = {}
+    10.times do
+      custom = Appointment.create_sample
+      assert times[custom.time].nil?
+      times[custom.time] = true
+    end
+  end
 end
 

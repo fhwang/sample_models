@@ -14,6 +14,10 @@ ActiveRecord::Base.establish_connection(config[ENV['DB'] || 'mysql'])
 def initialize_db
   silence_stream(STDOUT) do
     ActiveRecord::Schema.define do
+      create_table 'appointments', :force => true do |appointment|
+        appointment.datetime 'time'
+      end
+    
       create_table 'blog_posts', :force => true do |blog_post|
         blog_post.integer 'merged_into_id', 'user_id'
       end
@@ -50,6 +54,10 @@ end
 
 # ============================================================================
 # Define ActiveRecord classes
+class Appointment < ActiveRecord::Base
+  validates_uniqueness_of :time
+end
+
 class Comment < ActiveRecord::Base
 end
 

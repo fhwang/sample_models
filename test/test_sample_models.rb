@@ -2,8 +2,12 @@ require 'test/unit'
 require File.dirname(__FILE__) + "/../spec_or_test/setup"
 
 # auto-convert specs into tests whoooooha
+@@test_class_sequence = 1
+
 def describe(desc_name, &block)
   klass = Class.new Test::Unit::TestCase
+  Object.const_set "TestClass#{@@test_class_sequence}".to_sym, klass
+  @@test_class_sequence += 1
   def klass.it(it_name, &block)
     test_name = "test_" + it_name.gsub(/ /, '_')
     if instance_methods.include?(test_name)

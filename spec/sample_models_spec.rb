@@ -273,53 +273,6 @@ end
 
 # Actual specs start here ...
 
-describe 'Model with a unique string attribute' do
-  it 'should find the previously existing instance for repeated calls of .sample' do
-    user = User.sample
-    user_prime = User.sample
-    user.should == user_prime
-    user.login.should == user_prime.login
-  end
-  
-  it 'should find an existing record by unique fields and change other if necessary' do
-    User.destroy_all
-    user = User.create!(
-      :login => 'Test login', :homepage => 'http://www.google.com/',
-      :gender => 'f', :email => 'foo@bar.com', :crypted_password => 'asdf'
-    )
-    user_prime = User.sample
-    user_prime.login.should == user.login
-    user_prime.homepage.should == 'http://www.test.com/'
-    user.reload
-    user.homepage.should == 'http://www.test.com/'
-  end
-  
-  it 'should be able to modify other fields on the previously saved record if you specify the unique field' do
-    user = User.sample
-    user_prime = User.sample :login => user.login, :irc_nick => 'test_irc_nick'
-    user_prime.id.should == user.id
-    user_prime.irc_nick.should == 'test_irc_nick'
-    user.reload
-    user.irc_nick.should == 'test_irc_nick'
-  end
-  
-  it 'should know to create a new sample if any other fields are passed in' do
-    user = User.sample :password => 'password'
-    user.login.should_not == 'Test login'
-  end
-end
-
-describe 'Model with a unique time attribute' do
-  it 'should create a random unique value each time you call create_sample' do
-    times = {}
-    10.times do
-      custom = Appointment.create_sample
-      times[custom.time].should be_nil
-      times[custom.time] = true
-    end
-  end
-end
-
 describe 'Model with a unique associated attribute' do
   it 'should create a random unique associated record each time you call create_sample' do
     video_ids = {}

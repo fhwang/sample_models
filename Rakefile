@@ -6,7 +6,7 @@ gem 'rspec'
 require 'spec/rake/spectask'
 
 desc 'Default: run specs.'
-task :default => [:spec, :test]
+task :default => [:test, :spec]
 
 desc "Run all specs"
 Spec::Rake::SpecTask.new('spec') do |t|

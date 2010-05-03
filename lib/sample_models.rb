@@ -114,7 +114,15 @@ module SampleModels
         end
       end
       instance = @model_class.first :conditions => find_attributes
-      unless instance
+      if instance
+        needs_save = false
+        Model.belongs_to_associations(@model_class).each do |assoc|
+          if instance.send(assoc.primary_key_name) && 
+             !instance.send(assoc.name)
+           instance.send("#{assoc.name}=", assoc.klass.sample)
+          end
+        end
+      else
         instance = create_sample attrs
       end
       instance
@@ -155,6 +163,10 @@ module SampleModels
       @config[:allow_nil]
     end
     
+    def column
+      @model_class.columns.detect { |c| c.name == @fields.first.to_s }
+    end
+    
     def inclusion?
       @type == :validates_inclusion_of
     end
@@ -174,7 +186,11 @@ module SampleModels
         end
       when :validates_uniqueness_of
         @sequence_number += 1
-        "#{@fields.first.to_s.capitalize} #{@sequence_number}"
+        if column.type == :string
+          "#{@fields.first.to_s.capitalize} #{@sequence_number}"
+        elsif column.type == :datetime
+          Time.utc(1970, 1, 1) + @sequence_number.days
+        end
       end
     end
     
