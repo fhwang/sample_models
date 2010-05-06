@@ -56,6 +56,13 @@ module SampleModels
           a[assoc.name] = assoc.klass.sample(value)
         end
       end
+      Model.has_many_associations(@model_class).each do |assoc|
+        if values = a[assoc.name]
+          a[assoc.name] = values.map { |value|
+            value.is_a?(Hash) ? assoc.klass.sample(value) : value
+          }
+        end
+      end
       a
     end
     

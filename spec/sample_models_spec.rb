@@ -272,20 +272,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe 'Model with a has-many through association' do
-  it 'should not interfere with standard instance assignation' do
-    funny = Tag.sample :tag => 'funny'
-    bp = BlogPost.sample :tags => [funny]
-    bp.tags.size.should == 1
-    bp.tags.first.tag.should == 'funny'
-  end
-  
-  it 'should make it possible to assign as hashes' do
-    bp = BlogPost.sample :tags => [{:tag => 'funny'}]
-    bp.tags.size.should == 1
-    bp.tags.first.tag.should == 'funny'
-  end
-end
 
 describe 'Model with an invalid default field' do
   it "should raise an error when sample is called" do

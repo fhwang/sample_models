@@ -431,4 +431,21 @@ describe 'Model with a has-many through association' do
     bp4 = BlogPost.sample :tags => [sad, funny]
     assert_equal bp3, bp4
   end
+  
+  it 'should make it possible to assign and find as hashes' do
+    bp1 = BlogPost.sample :tags => [{:tag => 'funny'}]
+    assert_equal 1, bp1.tags.size
+    assert_equal 'funny', bp1.tags.first.tag
+    bp2 = BlogPost.sample :tags => [{:tag => 'funny'}]
+    assert_equal bp1, bp2
+  end
+  
+  it 'should handle a mix of instances and hashes in the array' do
+    funny = Tag.sample :tag => 'funny'
+    bp = BlogPost.sample :tags => [{:tag => 'sad'}, funny]
+    assert_equal 2, bp.tags.size
+    %w(sad funny).each do |t|
+      assert bp.tags.map(&:tag).include?(t)
+    end
+  end
 end
