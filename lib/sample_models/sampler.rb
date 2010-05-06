@@ -62,22 +62,61 @@ module SampleModels
     def sample(attrs)
       attrs = reify_association_hashes attrs
       attrs = HashWithIndifferentAccess.new attrs
-      find_attributes = {}
+      find_query = ARQuery.new
       attrs.each do |k,v|
         if @model_class.column_names.include?(k.to_s)
-          find_attributes[k] = v
+          find_query.conditions[k] = v
         end
       end
       Model.belongs_to_associations(@model_class).each do |assoc|
         if attrs.keys.include?(assoc.name.to_s)
-          find_attributes[assoc.primary_key_name] = if attrs[assoc.name]
+          find_query.conditions[assoc.primary_key_name] = if attrs[assoc.name]
             attrs[assoc.name].id
           else
             attrs[assoc.name]
           end
         end
       end
-      instance = @model_class.first :conditions => find_attributes
+      Model.has_many_associations(@model_class).each do |assoc|
+        if attrs.keys.include?(assoc.name.to_s)
+          value = attrs[assoc.name]
+          if value.empty?
+            not_matching_subselect = @model_class.send(
+              :construct_finder_sql,
+              :select => "#{@model_class.table_name}.id",
+              :joins => assoc.name,
+              :group => "#{@model_class.table_name}.id"
+            )
+            find_query.condition_sqls <<
+                "id not in (#{not_matching_subselect})"
+          else
+            matching_inner_subselect = @model_class.send(
+              :construct_finder_sql,
+              :select =>
+                  "#{@model_class.table_name}.id, count(#{assoc.klass.table_name}.id) as count",
+              :joins => assoc.name,
+              :conditions => [
+                "#{assoc.klass.table_name}.id in (?)", value.map(&:id)
+              ],
+              :group => "#{@model_class.table_name}.id"
+            )
+            matching_subselect = "id in (select matching.id from (#{matching_inner_subselect}) as matching where matching.count = #{value.size})"
+            find_query.condition_sqls << matching_subselect
+            not_matching_subselect = @model_class.send(
+              :construct_finder_sql,
+              :select => "#{@model_class.table_name}.id",
+              :joins => assoc.name,
+              :conditions => [
+                "#{assoc.klass.table_name}.id not in (?)", value.map(&:id)
+              ],
+              :group => "#{@model_class.table_name}.id"
+            )
+            find_query.condition_sqls <<
+                "id not in (#{not_matching_subselect})"
+          end
+        end
+      end
+      instance = @model_class.first find_query.to_hash
       if instance
         needs_save = false
         Model.belongs_to_associations(@model_class).each do |assoc|

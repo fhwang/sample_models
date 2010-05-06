@@ -39,6 +39,10 @@ class ARQuery
     @base_condition.sqls
   end
   
+  def conditions
+    @base_condition
+  end
+  
   def to_hash
     hash = @simple_values.dup
     hash[:conditions] = @base_condition.to_conditions if has_conditions?
@@ -67,9 +71,10 @@ class ARQuery
       @boolean_join = :and
       @children = []
     end
-  
-    def has_conditions?
-      !@sqls.empty?
+    
+    def []=(attr, value)
+      @sqls << "#{attr} = ?"
+      @bind_vars << value
     end
     
     def add_condition(&block)
@@ -79,6 +84,10 @@ class ARQuery
       else
         yield self
       end
+    end
+  
+    def has_conditions?
+      !@sqls.empty?
     end
     
     def to_conditions

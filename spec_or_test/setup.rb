@@ -21,6 +21,12 @@ def initialize_db
       create_table 'blog_posts', :force => true do |blog_post|
         blog_post.datetime 'published_at'
         blog_post.integer 'merged_into_id', 'user_id'
+        blog_post.string  'title'
+      end
+    
+      create_table "blog_post_tags", :force => true do |t|
+        t.integer "blog_post_id"
+        t.integer "tag_id"
       end
 
       create_table 'categories', :force => true do |category|
@@ -45,7 +51,11 @@ def initialize_db
         show.integer 'network_id'
         show.string  'name'
       end
-      
+
+      create_table "tags", :force => true do |t|
+        t.string  "tag"
+      end
+
       create_table 'users', :force => true do |user|
         user.integer 'favorite_blog_post_id'
         user.string  'email', 'gender', 'homepage', 'login', 'password'
@@ -80,11 +90,18 @@ class Comment < ActiveRecord::Base
 end
 
 class BlogPost < ActiveRecord::Base
+  has_many   :blog_post_tags
   belongs_to :merged_into,
              :class_name => 'BlogPost', :foreign_key => 'merged_into_id'
+  has_many   :tags, :through => :blog_post_tags
   belongs_to :user
   
   validates_presence_of :user_id
+end
+
+class BlogPostTag < ActiveRecord::Base
+  belongs_to :blog_post
+  belongs_to :tag
 end
 
 class Episode < ActiveRecord::Base
@@ -98,6 +115,13 @@ end
 
 class Show < ActiveRecord::Base
   belongs_to :network
+end
+
+class Tag < ActiveRecord::Base
+  validates_uniqueness_of :tag
+  
+  has_many :blog_post_tags
+  has_many :blog_posts, :through => :blog_post_tags
 end
 
 class User < ActiveRecord::Base

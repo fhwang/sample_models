@@ -272,61 +272,6 @@ SampleModels.configure Video do |video|
 end
 
 # Actual specs start here ...
-describe "Model when its default associated record has been deleted" do
-  it 'should just create a new one' do
-    ep1 = Episode.sample :name => 'funny'
-    ep1.show.destroy
-    ep2 = Episode.sample :name => 'funnier'
-    ep2.show.should_not be_nil
-  end
-  
-  it "should just create a new one even if the association is not validated to be present" do
-    show1 = Show.sample :name => "Oh no you didn't"
-    show1.network.destroy
-    show2 = Show.sample :name => "Don't go there"
-    show2.network.should_not be_nil
-  end
-end
-
-describe 'Model.sample when a instance already exists in the DB but has different attributes from the default' do
-  it 'should not update those different attributes' do
-    User.destroy_all
-    user1 = User.create!(
-      :birthday => Date.new(1960, 1, 1), :avg_rating => 99.99,
-      :login => 'Test login', :crypted_password => 'foobar', :gender => 'f',
-      :email => 'joebob@email.com', :bio => "here's my bio"
-    )
-    user2 = User.sample
-    user1.id.should == user2.id
-    user2.birthday.should == Date.new(1960, 1, 1)
-    user2.avg_rating.should == 99.99
-    user2.crypted_password.should == 'foobar'
-    user2.gender.should == 'f'
-    user2.email.should == 'joebob@email.com'
-    user2.bio.should == "here's my bio"
-  end
-end
-
-describe 'Model with an association that validates presence :if => [method], but is configured to nil' do
-  it 'should set the association to nil by default' do
-    bp = BlogPost.sample
-    bp.category.should be_nil
-    bp.category_id.should be_nil
-  end
-  
-  it 'should also set the association to nil even when other atts are set custom' do
-    bp = BlogPost.sample :title => "That shore was funny"
-    bp.category.should be_nil
-    bp.category_id.should be_nil
-  end
-  
-  it 'should set the association early on if the :if evaluates to true' do
-    bp = BlogPost.sample :category_ranking => 99
-    bp.category.should_not be_nil
-    bp.category_id.should_not be_nil
-  end
-end
-
 describe 'Model with a has-many through association' do
   it 'should not interfere with standard instance assignation' do
     funny = Tag.sample :tag => 'funny'

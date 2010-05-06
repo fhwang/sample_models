@@ -163,6 +163,15 @@ describe 'Model with a belongs_to association' do
     User.destroy_all
     blog_post2 = BlogPost.sample
     assert blog_post2.user
+    blog_post3 = BlogPost.sample :name => 'funny'
+    assert blog_post3.user
+  end
+  
+  it "should just create a new instance after destruction even if the association is not validated to be present" do
+    show1 = Show.sample :name => "Oh no you didn't"
+    show1.network.destroy
+    show2 = Show.sample :name => "Don't go there"
+    assert_not_nil show2.network
   end
 end
 
@@ -346,3 +355,80 @@ describe "Model when its default associated record has been deleted" do
   end
 end
 
+describe 'Model with a has-many through association' do
+  it 'should not interfere with standard instance assignation' do
+    funny = Tag.sample :tag => 'funny'
+    bp = BlogPost.sample :tags => [funny]
+    assert_equal 1, bp.tags.size
+    assert_equal 'funny', bp.tags.first.tag
+  end
+  
+  it 'should use the has-many through association to know that it needs to create a new instance' do
+    BlogPost.destroy_all
+    bp1 = BlogPost.sample
+    assert bp1.tags.empty?
+    funny = Tag.sample :tag => 'funny'
+    bp2 = BlogPost.sample :tags => [funny]
+    assert_equal %w(funny), bp2.tags.map(&:tag)
+    assert_not_equal bp1, bp2
+    assert_not_equal bp1.id, bp2.id
+    sad = Tag.sample :tag => 'sad'
+    bp3 = BlogPost.sample :tags => [sad]
+    assert_equal %w(sad), bp3.tags.map(&:tag)
+    [bp1, bp2].each do |other_bp|
+      assert_not_equal(
+        other_bp, bp3, "matched blog post with tags #{other_bp.tags.inspect}"
+      )
+      assert_not_equal other_bp.id, bp3.id
+    end
+    bp4 = BlogPost.sample :tags => [funny, sad]
+    [bp1, bp2, bp3].each do |other_bp|
+      assert_not_equal(
+        other_bp, bp4, "matched blog post with tags #{other_bp.tags.inspect}"
+      )
+      assert_not_equal other_bp.id, bp4.id
+    end
+    assert_equal 2, bp4.tags.size
+    %w(funny sad).each do |t|
+      assert bp4.tags.map(&:tag).include?(t)
+    end
+    bp5 = BlogPost.sample :tags => []
+    assert bp5.tags.empty?
+  end
+  
+  it 'should create a later instance based on an empty has-many through association' do
+    BlogPost.destroy_all
+    funny = Tag.sample :tag => 'funny'
+    bp1 = BlogPost.sample :tags => [funny]
+    bp2 = BlogPost.sample :tags => []
+    assert_not_equal bp1, bp2
+  end
+  
+  it "should create a later instance based on another attribute" do
+    BlogPost.destroy_all
+    funny = Tag.sample :tag => 'funny'
+    bp1 = BlogPost.sample :tags => [funny]
+    bp2 = BlogPost.sample :tags => [funny], :title => "really funny"
+    assert_not_equal bp1, bp2
+  end
+  
+  it "should not match an earlier instance based on a has-many through array that's a subset of the earlier array" do
+    BlogPost.destroy_all
+    funny = Tag.sample :tag => 'funny'
+    sad = Tag.sample :tag => 'sad'
+    bp1 = BlogPost.sample :tags => [funny, sad]
+    bp2 = BlogPost.sample :tags => [funny]
+    assert_not_equal bp1, bp2
+  end
+  
+  it 'should use the has-many through array to determine it already has a matching record' do
+    funny = Tag.sample :tag => 'funny'
+    bp1 = BlogPost.sample :tags => [funny]
+    bp2 = BlogPost.sample :tags => [funny]
+    assert_equal bp1, bp2
+    sad = Tag.sample :tag => 'sad'
+    bp3 = BlogPost.sample :tags => [funny, sad]
+    bp4 = BlogPost.sample :tags => [sad, funny]
+    assert_equal bp3, bp4
+  end
+end

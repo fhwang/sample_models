@@ -82,6 +82,21 @@ describe ARQuery do
     end
   end
   
+  describe '#conditions hash usage << with OR as the boolean join' do
+    before :all do
+      @ar_query = ARQuery.new
+      @ar_query.boolean_join = :or
+      @ar_query.conditions[:fname] = 'John'
+      @ar_query.conditions[:lname] = 'Doe'
+    end
+    
+    it 'should join the conditions with an OR' do
+      @ar_query.to_hash[:conditions].should == [
+        "(fname = ?) OR (lname = ?)", 'John', 'Doe'
+      ]
+    end
+  end
+
   describe '[:conditions]' do
     describe 'with bind vars' do
       before :all do
@@ -113,6 +128,35 @@ describe ARQuery do
         end
       end
     end
+    
+    describe 'with hash setters' do
+      before :all do
+        @ar_query = ARQuery.new
+        @ar_query.conditions[:fname] = 'John'
+        @ar_query.conditions[:lname] = 'Doe'
+      end
+      
+      it 'should return conditions as an array with bind vars' do
+        @ar_query.to_hash[:conditions].should == [
+          "(fname = ?) AND (lname = ?)", 'John', 'Doe'
+        ]
+      end
+    end
+    
+    describe 'with a combination of hash setters and bind vars' do
+      before :all do
+        @ar_query = ARQuery.new
+        @ar_query.conditions[:fname] = 'John'
+        @ar_query.condition_sqls << "lname = ?"
+        @ar_query.condition_bind_vars << 'Doe'
+      end
+      
+      it 'should return conditions as an array with bind vars' do
+        @ar_query.to_hash[:conditions].should == [
+          "(fname = ?) AND (lname = ?)", 'John', 'Doe'
+        ]
+      end
+    end
   end
   
   describe 'with a nested condition' do
@@ -134,6 +178,27 @@ describe ARQuery do
       @ar_query.to_hash[:conditions].should == [
         "(fname = ?) AND ((lname = ?) OR (lname = ?))",
         'Francis', 'Hwang', 'Bacon'
+      ]
+    end
+  end
+  
+  describe 'with a nested condition using hash setters' do
+    before :all do
+      @ar_query = ARQuery.new
+      @ar_query.condition_sqls << "fname = ?"
+      @ar_query.condition_bind_vars << 'Francis'
+      @ar_query.add_condition do |cond|
+        cond.boolean_join = :or
+        cond[:lname] = 'Hwang'
+        cond[:city] = 'Brooklyn'
+        cond.ar_query.should == @ar_query
+      end
+    end
+    
+    it 'should generate nested conditions in SQL' do
+      @ar_query.to_hash[:conditions].should == [
+        "(fname = ?) AND ((lname = ?) OR (city = ?))",
+        'Francis', 'Hwang', 'Brooklyn'
       ]
     end
   end
@@ -178,7 +243,7 @@ describe ARQuery do
       end
     end
     
-    it 'should not appending anything to the condition' do
+    it 'should not append anything to the condition' do
       @ar_query.to_hash[:conditions].should == '(published = true)'
     end
   end

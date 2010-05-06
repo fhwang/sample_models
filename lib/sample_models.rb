@@ -1,6 +1,7 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
   
 require "#{File.dirname(__FILE__)}/sample_models/sampler"
+require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
 
 module SampleModels
   mattr_reader   :samplers
@@ -65,6 +66,12 @@ module SampleModels
     def self.belongs_to_associations(model)
       model.reflect_on_all_associations.select { |assoc|
         assoc.macro == :belongs_to
+      }
+    end
+    
+    def self.has_many_associations(model)
+      model.reflect_on_all_associations.select { |assoc|
+        assoc.macro == :has_many
       }
     end
   end
