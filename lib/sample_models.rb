@@ -49,12 +49,19 @@ module SampleModels
       end
       
       def default(default)
-        @sampler.configured_default_attrs[@attribute] = default
+        if default.blank? and model.validates_presence_of?(@attribute)
+          raise "#{model.name} requires #{@attribute} to not be blank"
+        else
+          @sampler.configured_default_attrs[@attribute] = default
+        end
       end
       
       def force_unique
-        model = SampleModels.models[@sampler.model_class]
         model.record_validation :validates_uniqueness_of, @attribute
+      end
+      
+      def model
+        SampleModels.models[@sampler.model_class]
       end
     end
   end
@@ -103,6 +110,10 @@ module SampleModels
         @validation_collections[field].add(type, config)
       end
     end
+    
+    def validates_presence_of?(attr)
+      @validation_collections[attr].includes_presence?
+    end
   end
   
   class ValidationCollection
@@ -118,6 +129,10 @@ module SampleModels
     
     def column
       @model.columns.detect { |c| c.name == @field.to_s }
+    end
+    
+    def includes_presence?
+      @validations.has_key?(:validates_presence_of)
     end
     
     def includes_uniqueness?
@@ -137,14 +152,16 @@ module SampleModels
           assoc = @model.belongs_to_associations.detect { |a|
             a.association_foreign_key.to_sym == @field.to_sym
           }
-          value = if assoc
-            if includes_uniqueness?
+          if assoc
+            value = if includes_uniqueness?
               assoc.klass.create_sample
             else
               assoc.klass.first || assoc.klass.sample
             end
+            value = value.id if value
+          else
+            value ||= "#{@field} #{@sequence_number}"
           end
-          value = value.id if value
         end
       end
       if value.nil? && includes_uniqueness?
