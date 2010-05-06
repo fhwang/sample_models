@@ -449,3 +449,13 @@ describe 'Model with a has-many through association' do
     end
   end
 end
+
+describe 'Model with an invalid default field' do
+  it "should raise an error when sample is called" do
+    BadSample.destroy_all
+    assert_raise(ActiveRecord::RecordInvalid) do
+      BadSample.sample
+    end
+  end
+end
+

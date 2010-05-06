@@ -18,6 +18,10 @@ def initialize_db
         appointment.datetime 'time'
       end
     
+      create_table 'bad_samples', :force => true do |bad_sample|
+        bad_sample.string 'title'
+      end
+      
       create_table 'blog_posts', :force => true do |blog_post|
         blog_post.datetime 'published_at'
         blog_post.integer 'merged_into_id', 'user_id'
@@ -80,6 +84,10 @@ end
 # Define ActiveRecord classes
 class Appointment < ActiveRecord::Base
   validates_uniqueness_of :time
+end
+
+class BadSample < ActiveRecord::Base
+  validates_presence_of :title
 end
 
 class Category < ActiveRecord::Base
@@ -162,6 +170,10 @@ end
 
 # ============================================================================
 # sample_models configuration
+SampleModels.configure BadSample do |b|
+  b.title.default ''
+end
+
 SampleModels.configure BlogPost do |bp|
   bp.published_at.force_unique
 end

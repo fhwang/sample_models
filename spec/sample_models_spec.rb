@@ -271,16 +271,4 @@ SampleModels.configure Video do |video|
   video.force_unique :featured_at
 end
 
-# Actual specs start here ...
-
-describe 'Model with an invalid default field' do
-  it "should raise an error when sample is called" do
-    BadSample.destroy_all
-    lambda { BadSample.sample }.should raise_error(
-      RuntimeError,
-      /BadSample validation failed: Title can't be blank/
-    )
-  end
-end
-
 =end
