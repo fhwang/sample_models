@@ -11,6 +11,40 @@ module SampleModels
       }
     end
     
+    def add_has_many_subselect(value, assoc, find_query)
+      if value.empty?
+        not_matching_subselect = @model_class.send(
+          :construct_finder_sql,
+          :select => "#{@model_class.table_name}.id", :joins => assoc.name,
+          :group => "#{@model_class.table_name}.id"
+        )
+        find_query.condition_sqls << "id not in (#{not_matching_subselect})"
+      else
+        matching_inner_subselect = @model_class.send(
+          :construct_finder_sql,
+          :select =>
+            "#{@model_class.table_name}.id, count(#{assoc.klass.table_name}.id) as count",
+          :joins => assoc.name,
+          :conditions => [
+            "#{assoc.klass.table_name}.id in (?)", value.map(&:id)
+          ],
+          :group => "#{@model_class.table_name}.id"
+        )
+        matching_subselect =
+          "id in (select matching.id from (#{matching_inner_subselect}) as matching where matching.count = #{value.size})"
+        find_query.condition_sqls << matching_subselect
+        not_matching_subselect = @model_class.send(
+          :construct_finder_sql,
+          :select => "#{@model_class.table_name}.id", :joins => assoc.name,
+          :conditions => [
+            "#{assoc.klass.table_name}.id not in (?)", value.map(&:id)
+          ],
+          :group => "#{@model_class.table_name}.id"
+        )
+        find_query.condition_sqls << "id not in (#{not_matching_subselect})"
+      end
+    end
+    
     def belongs_to_assoc_for(column_or_name)
       name_to_match = nil
       if column_or_name.is_a?(String) or column_or_name.is_a?(Symbol)
@@ -86,41 +120,7 @@ module SampleModels
       end
       Model.has_many_associations(@model_class).each do |assoc|
         if attrs.keys.include?(assoc.name.to_s)
-          value = attrs[assoc.name]
-          if value.empty?
-            not_matching_subselect = @model_class.send(
-              :construct_finder_sql,
-              :select => "#{@model_class.table_name}.id",
-              :joins => assoc.name,
-              :group => "#{@model_class.table_name}.id"
-            )
-            find_query.condition_sqls <<
-                "id not in (#{not_matching_subselect})"
-          else
-            matching_inner_subselect = @model_class.send(
-              :construct_finder_sql,
-              :select =>
-                  "#{@model_class.table_name}.id, count(#{assoc.klass.table_name}.id) as count",
-              :joins => assoc.name,
-              :conditions => [
-                "#{assoc.klass.table_name}.id in (?)", value.map(&:id)
-              ],
-              :group => "#{@model_class.table_name}.id"
-            )
-            matching_subselect = "id in (select matching.id from (#{matching_inner_subselect}) as matching where matching.count = #{value.size})"
-            find_query.condition_sqls << matching_subselect
-            not_matching_subselect = @model_class.send(
-              :construct_finder_sql,
-              :select => "#{@model_class.table_name}.id",
-              :joins => assoc.name,
-              :conditions => [
-                "#{assoc.klass.table_name}.id not in (?)", value.map(&:id)
-              ],
-              :group => "#{@model_class.table_name}.id"
-            )
-            find_query.condition_sqls <<
-                "id not in (#{not_matching_subselect})"
-          end
+          add_has_many_subselect attrs[assoc.name], assoc, find_query
         end
       end
       instance = @model_class.first find_query.to_hash
