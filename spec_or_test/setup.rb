@@ -90,13 +90,6 @@ class BadSample < ActiveRecord::Base
   validates_presence_of :title
 end
 
-class Category < ActiveRecord::Base
-  belongs_to :parent, :class_name => 'Category'
-end
-
-class Comment < ActiveRecord::Base
-end
-
 class BlogPost < ActiveRecord::Base
   has_many   :blog_post_tags
   belongs_to :merged_into,
@@ -110,6 +103,13 @@ end
 class BlogPostTag < ActiveRecord::Base
   belongs_to :blog_post
   belongs_to :tag
+end
+
+class Category < ActiveRecord::Base
+  belongs_to :parent, :class_name => 'Category'
+end
+
+class Comment < ActiveRecord::Base
 end
 
 class Episode < ActiveRecord::Base
