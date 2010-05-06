@@ -1,10 +1,16 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
   
+require 'delegate'
 require "#{File.dirname(__FILE__)}/sample_models/sampler"
 require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
 
 module SampleModels
-  mattr_reader   :samplers
+  mattr_reader :models
+  @@models = Hash.new { |h, model_class| 
+    h[model_class] = Model.new(model_class)
+  }
+  
+  mattr_reader :samplers
   @@samplers = Hash.new { |h, model_class|
     h[model_class] = Sampler.new(model_class)
   }
@@ -47,7 +53,8 @@ module SampleModels
       end
       
       def force_unique
-        @sampler.record_validation :validates_uniqueness_of, @attribute
+        model = SampleModels.models[@sampler.model_class]
+        model.record_validation :validates_uniqueness_of, @attribute
       end
     end
   end
@@ -62,23 +69,45 @@ module SampleModels
     end
   end
   
-  class Model
-    def self.belongs_to_associations(model)
-      model.reflect_on_all_associations.select { |assoc|
+  class Model < Delegator
+    attr_reader :validation_collections
+    
+    def initialize(model_class)
+      @model_class = model_class
+      @validation_collections = Hash.new { |h, field|
+        h[field] = ValidationCollection.new(self, field)
+      }
+    end
+    
+    def __getobj__
+      @model_class
+    end
+    
+    def belongs_to_associations
+      @model_class.reflect_on_all_associations.select { |assoc|
         assoc.macro == :belongs_to
       }
     end
     
-    def self.has_many_associations(model)
-      model.reflect_on_all_associations.select { |assoc|
+    def has_many_associations
+      @model_class.reflect_on_all_associations.select { |assoc|
         assoc.macro == :has_many
       }
+    end
+    
+    def record_validation(*args)
+      type = args.shift
+      config = args.extract_options!
+      fields = args
+      fields.each do |field|
+        @validation_collections[field].add(type, config)
+      end
     end
   end
   
   class ValidationCollection
-    def initialize(model_class, field)
-      @model_class, @field = model_class, field
+    def initialize(model, field)
+      @model, @field = model, field
       @sequence_number = 0
       @validations = {}
     end
@@ -88,7 +117,7 @@ module SampleModels
     end
     
     def column
-      @model_class.columns.detect { |c| c.name == @field.to_s }
+      @model.columns.detect { |c| c.name == @field.to_s }
     end
     
     def includes_uniqueness?
@@ -105,7 +134,7 @@ module SampleModels
         when :validates_inclusion_of
           value = config[:in].first
         when :validates_presence_of
-          assoc = Model.belongs_to_associations(@model_class).detect { |a|
+          assoc = @model.belongs_to_associations.detect { |a|
             a.association_foreign_key.to_sym == @field.to_sym
           }
           value = if assoc
@@ -143,7 +172,7 @@ module ActiveRecord
         if method_defined?(validation)
           define_method "#{validation}_with_sample_models".to_sym do |*args|
             send "#{validation}_without_sample_models".to_sym, *args
-            SampleModels.samplers[self].record_validation(
+            SampleModels.models[self].record_validation(
               validation, *args
             )
           end

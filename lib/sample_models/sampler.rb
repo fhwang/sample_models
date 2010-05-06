@@ -6,9 +6,6 @@ module SampleModels
     def initialize(model_class)
       @model_class = model_class
       @configured_default_attrs = {}
-      @validation_collections = Hash.new { |h,k|
-        h[k] = ValidationCollection.new(@model_class, k)
-      }
     end
     
     def add_has_many_subselect(value, assoc, find_query)
@@ -52,7 +49,7 @@ module SampleModels
       else
         name_to_match = column_or_name.name.to_sym
       end
-      Model.belongs_to_associations(@model_class).detect { |a|
+      model.belongs_to_associations.detect { |a|
         a.name.to_sym == name_to_match ||
         a.primary_key_name.to_sym == name_to_match
       }
@@ -62,7 +59,7 @@ module SampleModels
       attrs = reify_association_hashes attrs
       orig_attrs = HashWithIndifferentAccess.new attrs
       attrs = orig_attrs.clone
-      @validation_collections.each do |field, validation_collection|
+      model.validation_collections.each do |field, validation_collection|
         unless attrs.has_key?(field)
           attrs[field] = validation_collection.satisfying_value
         end
@@ -74,23 +71,18 @@ module SampleModels
       instance
     end
     
-    def record_validation(*args)
-      type = args.shift
-      config = args.extract_options!
-      fields = args
-      fields.each do |field|
-        @validation_collections[field].add(type, config)
-      end
+    def model
+      SampleModels.models[@model_class]
     end
     
     def reify_association_hashes(attrs)
       a = attrs.clone
-      Model.belongs_to_associations(@model_class).each do |assoc|
+      model.belongs_to_associations.each do |assoc|
         if (value = a[assoc.name]) && value.is_a?(Hash)
           a[assoc.name] = assoc.klass.sample(value)
         end
       end
-      Model.has_many_associations(@model_class).each do |assoc|
+      model.has_many_associations.each do |assoc|
         if values = a[assoc.name]
           a[assoc.name] = values.map { |value|
             value.is_a?(Hash) ? assoc.klass.sample(value) : value
@@ -109,7 +101,7 @@ module SampleModels
           find_query.conditions[k] = v
         end
       end
-      Model.belongs_to_associations(@model_class).each do |assoc|
+      model.belongs_to_associations.each do |assoc|
         if attrs.keys.include?(assoc.name.to_s)
           find_query.conditions[assoc.primary_key_name] = if attrs[assoc.name]
             attrs[assoc.name].id
@@ -118,7 +110,7 @@ module SampleModels
           end
         end
       end
-      Model.has_many_associations(@model_class).each do |assoc|
+      model.has_many_associations.each do |assoc|
         if attrs.keys.include?(assoc.name.to_s)
           add_has_many_subselect attrs[assoc.name], assoc, find_query
         end
@@ -126,7 +118,7 @@ module SampleModels
       instance = @model_class.first find_query.to_hash
       if instance
         needs_save = false
-        Model.belongs_to_associations(@model_class).each do |assoc|
+        model.belongs_to_associations.each do |assoc|
           if instance.send(assoc.primary_key_name) && 
              !instance.send(assoc.name)
            instance.send("#{assoc.name}=", assoc.klass.sample)
@@ -141,7 +133,7 @@ module SampleModels
     def update_associations(instance, attrs, orig_attrs)
       proxied_associations = []
       needs_another_save = false
-      Model.belongs_to_associations(@model_class).each do |assoc|
+      model.belongs_to_associations.each do |assoc|
         unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
                attrs.has_key?(assoc.association_foreign_key) ||
                @model_class == assoc.klass
