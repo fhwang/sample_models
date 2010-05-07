@@ -68,7 +68,7 @@ def initialize_db
       end
       
       create_table 'videos', :force => true do |video|
-        video.integer 'episode_id', 'show_id', 'network_id'
+        video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
       end
     
       create_table 'video_favorites', :force => true do |video_favorite|
@@ -210,4 +210,5 @@ SampleModels.configure Video do |video|
       end
     end
   end
+  video.view_count.default 0
 end

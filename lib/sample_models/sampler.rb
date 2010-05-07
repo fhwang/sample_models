@@ -42,6 +42,11 @@ module SampleModels
           attrs[field] = validation_collection.satisfying_value
         end
       end
+      @configured_default_attrs.each do |attr, val|
+        unless attrs.has_key?(attr)
+          attrs[attr] = val
+        end
+      end
       model.columns.each do |column|
         unless attrs.has_key?(column.name)
           case column.type
@@ -58,11 +63,6 @@ module SampleModels
           when :float
             attrs[column.name] = 1.0
           end
-        end
-      end
-      @configured_default_attrs.each do |attr, val|
-        unless attrs.has_key?(attr)
-          attrs[attr] = val
         end
       end
       instance = model_class.new attrs

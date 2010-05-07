@@ -200,6 +200,12 @@ describe 'Model with a belongs_to association of the same class' do
   end
 end
 
+describe 'Model with a configured attribute' do
+  it 'should use that default' do
+    assert_equal 0, Video.sample.view_count
+  end
+end
+
 describe 'Model with a configured default association' do
   it 'should use that default' do
     cat = Category.sample
@@ -218,6 +224,7 @@ describe 'Model with a configured default association' do
     assert_equal sports, soccer.parent
   end
 end
+
 
 describe 'Model configuration with a bad field name' do
   it 'should raise a useful error message' do
