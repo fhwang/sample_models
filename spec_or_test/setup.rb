@@ -16,6 +16,7 @@ def initialize_db
     ActiveRecord::Schema.define do
       create_table 'appointments', :force => true do |appointment|
         appointment.datetime 'time'
+        appointment.integer 'user_id', 'calendar_id'
       end
     
       create_table 'blog_posts', :force => true do |blog_post|
@@ -27,6 +28,10 @@ def initialize_db
       create_table "blog_post_tags", :force => true do |t|
         t.integer "blog_post_id"
         t.integer "tag_id"
+      end
+
+      create_table 'calendars', :force => true do |appointment|
+        appointment.integer 'user_id'
       end
 
       create_table 'categories', :force => true do |category|
@@ -79,7 +84,17 @@ end
 # ============================================================================
 # Define ActiveRecord classes
 class Appointment < ActiveRecord::Base
+  belongs_to :calendar
+  belongs_to :user
+  
+  validates_presence_of :calendar_id, :user_id
   validates_uniqueness_of :time
+  
+  def validate
+    if calendar.user_id != user_id
+      errors.add "Appointment needs same user as the calendar"
+    end
+  end
 end
 
 class BlogPost < ActiveRecord::Base
@@ -96,6 +111,12 @@ end
 class BlogPostTag < ActiveRecord::Base
   belongs_to :blog_post
   belongs_to :tag
+end
+
+class Calendar < ActiveRecord::Base
+  belongs_to :user
+  
+  validates_presence_of :user_id
 end
 
 class Category < ActiveRecord::Base
@@ -163,6 +184,12 @@ end
 
 # ============================================================================
 # sample_models configuration
+SampleModels.configure Appointment do |appointment|
+  appointment.before_save do |a|
+    a.user_id = a.calendar.user_id
+  end
+end
+
 SampleModels.configure BlogPost do |bp|
   bp.published_at.force_unique
 end
@@ -172,7 +199,7 @@ SampleModels.configure Category do |category|
 end
 
 SampleModels.configure Video do |video|
-  video.before_save { |v, sample_attrs|
+  video.before_save do |v, sample_attrs|
     if v.episode && v.episode.show != v.show
       if sample_attrs[:show]
         v.episode.show = v.show
@@ -180,5 +207,5 @@ SampleModels.configure Video do |video|
         v.show = v.episode.show
       end
     end
-  }
+  end
 end

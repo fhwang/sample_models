@@ -274,6 +274,10 @@ describe 'Model with a redundant but validated association' do
     assert_not_nil v2.episode.show
     assert_equal v2.show, v2.episode.show
   end
+  
+  it 'should be able to use a before_save with only the first argument' do
+    appt = Appointment.sample
+  end
 end
 
 describe 'Model with a unique associated attribute' do

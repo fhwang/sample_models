@@ -65,7 +65,13 @@ module SampleModels
         end
       end
       instance = model_class.new attrs
-      before_save.call(instance, orig_attrs) if before_save
+      if before_save
+        if before_save.arity == 1
+          before_save.call instance
+        else
+          before_save.call instance, orig_attrs
+        end
+      end
       instance.save!
       update_associations(instance, attrs, orig_attrs)
       instance
