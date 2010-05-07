@@ -16,7 +16,7 @@ def initialize_db
     ActiveRecord::Schema.define do
       create_table 'appointments', :force => true do |appointment|
         appointment.datetime 'time'
-        appointment.integer 'user_id', 'calendar_id'
+        appointment.integer 'user_id', 'calendar_id', 'category_id'
       end
     
       create_table 'blog_posts', :force => true do |blog_post|
@@ -85,6 +85,7 @@ end
 # Define ActiveRecord classes
 class Appointment < ActiveRecord::Base
   belongs_to :calendar
+  belongs_to :category
   belongs_to :user
   
   validates_presence_of :calendar_id, :user_id

@@ -275,7 +275,7 @@ describe 'Model with a redundant but validated association' do
     assert_equal v2.show, v2.episode.show
   end
   
-  it 'should be able to use a before_save with only the first argument' do
+  it 'should be able to use a before_save with only the first argument, and afterwards when a non-required association forces a 2nd save' do
     appt = Appointment.sample
   end
 end

@@ -55,6 +55,14 @@ module SampleModels
       }
     end
     
+    def call_before_save(instance, orig_attrs)
+      if before_save.arity == 1
+        before_save.call instance
+      else
+        before_save.call instance, orig_attrs
+      end
+    end
+    
     def create_sample(attrs)
       attrs = reify_association_hashes attrs
       orig_attrs = HashWithIndifferentAccess.new attrs
@@ -65,13 +73,7 @@ module SampleModels
         end
       end
       instance = model_class.new attrs
-      if before_save
-        if before_save.arity == 1
-          before_save.call instance
-        else
-          before_save.call instance, orig_attrs
-        end
-      end
+      call_before_save(instance, orig_attrs) if before_save
       instance.save!
       update_associations(instance, attrs, orig_attrs)
       instance
@@ -148,7 +150,7 @@ module SampleModels
         end
       end
       if needs_another_save
-        before_save.call(instance, orig_attrs) if before_save
+        call_before_save(instance, orig_attrs) if before_save
         instance.save!
       end
     end
