@@ -289,6 +289,12 @@ describe 'Model with a redundant but validated association' do
   it 'should be able to use a before_save with only the first argument, and afterwards when a non-required association forces a 2nd save' do
     appt = Appointment.sample
   end
+  
+  it 'should be able to recover from the associated value being destroyed' do
+    Appointment.sample
+    User.destroy_all
+    Appointment.sample
+  end
 end
 
 describe 'Model with a unique associated attribute' do
