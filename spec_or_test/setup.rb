@@ -15,7 +15,7 @@ def initialize_db
   silence_stream(STDOUT) do
     ActiveRecord::Schema.define do
       create_table 'appointments', :force => true do |appointment|
-        appointment.datetime 'time'
+        appointment.datetime 'start_time', 'end_time'
         appointment.integer 'user_id', 'calendar_id', 'category_id'
       end
     
@@ -23,6 +23,7 @@ def initialize_db
         blog_post.datetime 'published_at'
         blog_post.integer 'merged_into_id', 'user_id'
         blog_post.string  'title'
+        blog_post.float   'average_rating'
       end
     
       create_table "blog_post_tags", :force => true do |t|
@@ -53,7 +54,7 @@ def initialize_db
       end
       
       create_table 'shows', :force => true do |show|
-        show.integer 'network_id'
+        show.integer 'network_id', 'subscription_price'
         show.string  'name'
       end
 
@@ -89,7 +90,7 @@ class Appointment < ActiveRecord::Base
   belongs_to :user
   
   validates_presence_of :calendar_id, :user_id
-  validates_uniqueness_of :time
+  validates_uniqueness_of :start_time
   
   def validate
     if calendar.user_id != user_id

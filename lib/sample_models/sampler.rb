@@ -72,6 +72,29 @@ module SampleModels
           attrs[field] = validation_collection.satisfying_value
         end
       end
+      model.columns.each do |column|
+        unless attrs.has_key?(column.name)
+          case column.type
+          when :string
+            attrs[column.name] = "#{column.name}"
+          when :integer
+            unless model.belongs_to_associations.any? { |assoc|
+              assoc.primary_key_name == column.name
+            }
+              attrs[column.name] = 1
+            end
+          when :datetime
+            attrs[column.name] = Time.now.utc
+          when :float
+            attrs[column.name] = 1.0
+          end
+        end
+      end
+      @configured_default_attrs.each do |attr, val|
+        unless attrs.has_key?(attr)
+          attrs[attr] = val
+        end
+      end
       instance = model_class.new attrs
       call_before_save(instance, orig_attrs) if before_save
       instance.save!

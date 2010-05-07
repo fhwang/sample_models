@@ -1,4 +1,15 @@
 describe "Model.sample" do
+  it 'should fill non-validated, non-configured fields with a non-blank value' do
+    appt = Appointment.sample
+    assert appt.end_time.is_a?(Time)
+    blog_post = BlogPost.sample
+    assert blog_post.average_rating.is_a?(Float)
+    show = Show.sample
+    assert show.subscription_price.is_a?(Integer)
+    network = Network.sample
+    assert network.name.is_a?(String)
+  end
+  
   it 'should allow overrides of all fields in sample' do
     user = User.sample(
       :homepage => 'http://mysite.com/', :password => 'myownpassword'
@@ -333,8 +344,8 @@ describe 'Model with a unique time attribute' do
     times = {}
     10.times do
       custom = Appointment.create_sample
-      assert times[custom.time].nil?
-      times[custom.time] = true
+      assert times[custom.start_time].nil?
+      times[custom.start_time] = true
     end
   end
 end
