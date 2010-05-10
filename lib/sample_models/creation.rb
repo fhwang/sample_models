@@ -4,6 +4,12 @@ module SampleModels
       @sampler, @attrs = sampler, attrs
     end
     
+    def any_sample
+      SampleModels.samplers.values.map(&:model_class).detect { |m|
+        m != @sampler.model_class
+      }.sample
+    end
+    
     def model
       SampleModels.models[@sampler.model_class]
     end
@@ -28,12 +34,7 @@ module SampleModels
     def set_attr_based_on_column_type(attrs, column)
       case column.type
       when :string
-        unless model.belongs_to_associations.any? { |assoc|
-          assoc.options[:polymorphic] &&
-            assoc.options[:foreign_type] = column.name
-        }
-          attrs[column.name] = "#{column.name}"
-        end
+        set_attr_based_on_string_column_type(attrs, column)
       when :integer
         unless model.belongs_to_associations.any? { |assoc|
           assoc.primary_key_name == column.name
@@ -44,6 +45,15 @@ module SampleModels
         attrs[column.name] = Time.now.utc
       when :float
         attrs[column.name] = 1.0
+      end
+    end
+    
+    def set_attr_based_on_string_column_type(attrs, column)
+      unless model.belongs_to_associations.any? { |assoc|
+        assoc.options[:polymorphic] &&
+          assoc.options[:foreign_type] = column.name
+      }
+        attrs[column.name] = "#{column.name}"
       end
     end
     
@@ -64,31 +74,20 @@ module SampleModels
     end
     
     def update_associations(instance, attrs, orig_attrs)
-      proxied_associations = []
       needs_another_save = false
       model.belongs_to_associations.each do |assoc|
         unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
                attrs.has_key?(assoc.association_foreign_key)
           if assoc.options[:polymorphic]
             needs_another_save = true
-            random_class = nil
-            ObjectSpace.each_object(Class) do |klass|
-              if klass.superclass == ActiveRecord::Base &&
-                  klass != @sampler.model_class
-                random_class = klass
-                break
-              end
-            end
-            instance.send "#{assoc.name}=", random_class.sample
+            instance.send "#{assoc.name}=", any_sample
           elsif @sampler.model_class != assoc.klass
             needs_another_save = true
             instance.send "#{assoc.name}=", assoc.klass.sample
           end
         end
       end
-      if needs_another_save
-        @sampler.save! instance, orig_attrs
-      end
+      @sampler.save!(instance, orig_attrs) if needs_another_save
     end
   end
 end
