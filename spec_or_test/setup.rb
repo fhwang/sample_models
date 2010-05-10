@@ -30,6 +30,11 @@ def initialize_db
         t.integer "blog_post_id"
         t.integer "tag_id"
       end
+      
+      create_table "bookmarks", :force => true do |t|
+        t.integer "bookmarkable_id"
+        t.string  "bookmarkable_type"
+      end
 
       create_table 'calendars', :force => true do |appointment|
         appointment.integer 'user_id'
@@ -113,6 +118,10 @@ end
 class BlogPostTag < ActiveRecord::Base
   belongs_to :blog_post
   belongs_to :tag
+end
+
+class Bookmark < ActiveRecord::Base
+  belongs_to :bookmarkable, :polymorphic => true
 end
 
 class Calendar < ActiveRecord::Base

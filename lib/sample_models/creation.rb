@@ -28,7 +28,12 @@ module SampleModels
     def set_attr_based_on_column_type(attrs, column)
       case column.type
       when :string
-        attrs[column.name] = "#{column.name}"
+        unless model.belongs_to_associations.any? { |assoc|
+          assoc.options[:polymorphic] &&
+            assoc.options[:foreign_type] = column.name
+        }
+          attrs[column.name] = "#{column.name}"
+        end
       when :integer
         unless model.belongs_to_associations.any? { |assoc|
           assoc.primary_key_name == column.name
@@ -63,10 +68,22 @@ module SampleModels
       needs_another_save = false
       model.belongs_to_associations.each do |assoc|
         unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
-               attrs.has_key?(assoc.association_foreign_key) ||
-               @sampler.model_class == assoc.klass
-          needs_another_save = true
-          instance.send("#{assoc.name}=", assoc.klass.sample)
+               attrs.has_key?(assoc.association_foreign_key)
+          if assoc.options[:polymorphic]
+            needs_another_save = true
+            random_class = nil
+            ObjectSpace.each_object(Class) do |klass|
+              if klass.superclass == ActiveRecord::Base &&
+                  klass != @sampler.model_class
+                random_class = klass
+                break
+              end
+            end
+            instance.send "#{assoc.name}=", random_class.sample
+          elsif @sampler.model_class != assoc.klass
+            needs_another_save = true
+            instance.send "#{assoc.name}=", assoc.klass.sample
+          end
         end
       end
       if needs_another_save

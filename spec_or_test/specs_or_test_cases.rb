@@ -488,3 +488,11 @@ describe 'Model with an invalid default field' do
   end
 end
 
+describe 'Model with a polymorphic belongs-to association' do
+  it 'should fill in that association with any old sample of another domain class' do
+    bookmark = Bookmark.sample
+    assert_not_nil bookmark.bookmarkable
+    assert_equal ActiveRecord::Base, bookmark.bookmarkable.class.superclass
+    assert_not_equal Bookmark, bookmark.bookmarkable.class
+  end
+end
