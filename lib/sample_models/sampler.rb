@@ -25,51 +25,8 @@ module SampleModels
       @configured_default_attrs = {}
     end
     
-    def call_before_save(instance, orig_attrs)
-      if before_save.arity == 1
-        before_save.call instance
-      else
-        before_save.call instance, orig_attrs
-      end
-    end
-    
     def create_sample(attrs)
-      attrs = self.class.reify_association_hashes model, attrs
-      orig_attrs = HashWithIndifferentAccess.new attrs
-      attrs = orig_attrs.clone
-      model.validation_collections.each do |field, validation_collection|
-        unless attrs.has_key?(field)
-          attrs[field] = validation_collection.satisfying_value
-        end
-      end
-      @configured_default_attrs.each do |attr, val|
-        unless attrs.has_key?(attr)
-          attrs[attr] = val
-        end
-      end
-      model.columns.each do |column|
-        unless attrs.has_key?(column.name)
-          case column.type
-          when :string
-            attrs[column.name] = "#{column.name}"
-          when :integer
-            unless model.belongs_to_associations.any? { |assoc|
-              assoc.primary_key_name == column.name
-            }
-              attrs[column.name] = 1
-            end
-          when :datetime
-            attrs[column.name] = Time.now.utc
-          when :float
-            attrs[column.name] = 1.0
-          end
-        end
-      end
-      instance = model_class.new attrs
-      call_before_save(instance, orig_attrs) if before_save
-      instance.save!
-      update_associations(instance, attrs, orig_attrs)
-      instance
+      Creation.new(self, attrs).run
     end
     
     def model
@@ -87,29 +44,22 @@ module SampleModels
            needs_save = true
           end
         end
-        call_before_save(instance, attrs) if before_save
-        instance.save! if needs_save
+        save!(instance, attrs) if needs_save
       else
         instance = create_sample attrs
       end
       instance
     end
     
-    def update_associations(instance, attrs, orig_attrs)
-      proxied_associations = []
-      needs_another_save = false
-      model.belongs_to_associations.each do |assoc|
-        unless instance.send(assoc.name) || attrs.has_key?(assoc.name) ||
-               attrs.has_key?(assoc.association_foreign_key) ||
-               @model_class == assoc.klass
-          needs_another_save = true
-          instance.send("#{assoc.name}=", assoc.klass.sample)
+    def save!(instance, orig_attrs)
+      if @before_save
+        if @before_save.arity == 1
+          @before_save.call instance
+        else
+          @before_save.call instance, orig_attrs
         end
       end
-      if needs_another_save
-        call_before_save(instance, orig_attrs) if before_save
-        instance.save!
-      end
+      instance.save!
     end
     
     class Finder

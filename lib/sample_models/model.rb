@@ -67,6 +67,23 @@ module SampleModels
         @validations.has_key?(:validates_uniqueness_of)
       end
       
+      def satisfying_present_value(prev_value)
+        assoc = @model.belongs_to_associations.detect { |a|
+          a.association_foreign_key.to_sym == @field.to_sym
+        }
+        if assoc
+          value = if includes_uniqueness?
+            assoc.klass.create_sample
+          else
+            assoc.klass.first || assoc.klass.sample
+          end
+          value = value.id if value
+          value
+        else
+          prev_value || "#{@field} #{@sequence_number}"
+        end
+      end
+      
       def satisfying_value
         @sequence_number += 1 if includes_uniqueness?
         value = nil
@@ -77,29 +94,19 @@ module SampleModels
           when :validates_inclusion_of
             value = config[:in].first
           when :validates_presence_of
-            assoc = @model.belongs_to_associations.detect { |a|
-              a.association_foreign_key.to_sym == @field.to_sym
-            }
-            if assoc
-              value = if includes_uniqueness?
-                assoc.klass.create_sample
-              else
-                assoc.klass.first || assoc.klass.sample
-              end
-              value = value.id if value
-            else
-              value ||= "#{@field} #{@sequence_number}"
-            end
+            value = satisfying_present_value(value)
           end
         end
-        if value.nil? && includes_uniqueness?
-          value = if column.type == :string
-            "#{@field.to_s.capitalize} #{@sequence_number}"
-          elsif column.type == :datetime
-            Time.utc(1970, 1, 1) + @sequence_number.days
-          end
-        end
+        value = unique_value if value.nil? && includes_uniqueness?
         value
+      end
+      
+      def unique_value
+        if column.type == :string
+          "#{@field.to_s.capitalize} #{@sequence_number}"
+        elsif column.type == :datetime
+          Time.utc(1970, 1, 1) + @sequence_number.days
+        end
       end
     end
   end
