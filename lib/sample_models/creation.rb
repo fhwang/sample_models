@@ -12,38 +12,50 @@ module SampleModels
       attrs = Sampler.reify_association_hashes model, @attrs
       orig_attrs = HashWithIndifferentAccess.new attrs
       attrs = orig_attrs.clone
-      model.validation_collections.each do |field, validation_collection|
-        unless attrs.has_key?(field)
-          attrs[field] = validation_collection.satisfying_value
-        end
-      end
-      @sampler.configured_default_attrs.each do |attr, val|
-        unless attrs.has_key?(attr)
-          attrs[attr] = val
-        end
-      end
+      set_attrs_based_on_validations attrs
+      set_attrs_based_on_configured_defaults attrs
       model.columns.each do |column|
         unless attrs.has_key?(column.name)
-          case column.type
-          when :string
-            attrs[column.name] = "#{column.name}"
-          when :integer
-            unless model.belongs_to_associations.any? { |assoc|
-              assoc.primary_key_name == column.name
-            }
-              attrs[column.name] = 1
-            end
-          when :datetime
-            attrs[column.name] = Time.now.utc
-          when :float
-            attrs[column.name] = 1.0
-          end
+          set_attr_based_on_column_type attrs, column
         end
       end
       instance = @sampler.model_class.new attrs
       @sampler.save! instance, orig_attrs
       update_associations(instance, attrs, orig_attrs)
       instance
+    end
+    
+    def set_attr_based_on_column_type(attrs, column)
+      case column.type
+      when :string
+        attrs[column.name] = "#{column.name}"
+      when :integer
+        unless model.belongs_to_associations.any? { |assoc|
+          assoc.primary_key_name == column.name
+        }
+          attrs[column.name] = 1
+        end
+      when :datetime
+        attrs[column.name] = Time.now.utc
+      when :float
+        attrs[column.name] = 1.0
+      end
+    end
+    
+    def set_attrs_based_on_configured_defaults(attrs)
+      @sampler.configured_default_attrs.each do |attr, val|
+        unless attrs.has_key?(attr)
+          attrs[attr] = val
+        end
+      end
+    end
+    
+    def set_attrs_based_on_validations(attrs)
+      model.validation_collections.each do |field, validation_collection|
+        unless attrs.has_key?(field)
+          attrs[field] = validation_collection.satisfying_value
+        end
+      end
     end
     
     def update_associations(instance, attrs, orig_attrs)

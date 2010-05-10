@@ -78,19 +78,8 @@ module SampleModels
       end
       
       def add_non_empty_has_many_subselect(assoc)
+        @ar_query.condition_sqls << has_many_matching_subselect(assoc)
         value = @attrs[assoc.name]
-        matching_inner_subselect = @model.construct_finder_sql(
-          :select =>
-            "#{@model.table_name}.id, count(#{assoc.klass.table_name}.id) as count",
-          :joins => assoc.name,
-          :conditions => [
-            "#{assoc.klass.table_name}.id in (?)", value.map(&:id)
-          ],
-          :group => "#{@model.table_name}.id"
-        )
-        matching_subselect =
-          "id in (select matching.id from (#{matching_inner_subselect}) as matching where matching.count = #{value.size})"
-        @ar_query.condition_sqls << matching_subselect
         not_matching_subselect = @model.construct_finder_sql(
           :select => "#{@model.table_name}.id", :joins => assoc.name,
           :conditions => [
@@ -119,6 +108,20 @@ module SampleModels
             @ar_query.conditions[k] = v
           end
         end
+      end
+      
+      def has_many_matching_subselect(assoc)
+        value = @attrs[assoc.name]
+        matching_inner_subselect = @model.construct_finder_sql(
+          :select =>
+            "#{@model.table_name}.id, count(#{assoc.klass.table_name}.id) as count",
+          :joins => assoc.name,
+          :conditions => [
+            "#{assoc.klass.table_name}.id in (?)", value.map(&:id)
+          ],
+          :group => "#{@model.table_name}.id"
+        )
+        "id in (select matching.id from (#{matching_inner_subselect}) as matching where matching.count = #{value.size})"
       end
 
       def instance
