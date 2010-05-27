@@ -18,11 +18,24 @@ module SampleModels
     end
     
     attr_accessor :before_save
-    attr_reader   :configured_default_attrs, :model_class
+    attr_reader   :configured_default_attrs, :model_class, :named_sample_attrs
     
     def initialize(model_class)
       @model_class = model_class
       @configured_default_attrs = {}
+      @named_sample_attrs = HashWithIndifferentAccess.new
+    end
+    
+    def attrs_from_args(*args)
+      if args.first.is_a?(Symbol)
+        attrs = named_sample_attrs[args.shift]
+        attrs = attrs.merge(args.first) unless args.empty?
+        attrs
+      elsif !args.empty?
+        args.first.clone
+      else
+        {}
+      end
     end
     
     def create_sample(attrs)

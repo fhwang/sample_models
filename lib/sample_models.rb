@@ -37,7 +37,11 @@ module SampleModels
     end
     
     def method_missing(meth, *args)
-      Attribute.new(sampler, meth)
+      if meth.to_s =~ /(.*)_sample$/
+        sampler.named_sample_attrs[$1] = args.first
+      else
+        Attribute.new(sampler, meth)
+      end
     end
     
     def sampler
@@ -68,12 +72,14 @@ module SampleModels
   end
   
   module ARClassMethods
-    def create_sample(attrs={})
-      SampleModels.samplers[self].create_sample attrs
+    def create_sample(*args)
+      sampler = SampleModels.samplers[self]
+      sampler.create_sample(sampler.attrs_from_args(*args))
     end
     
-    def sample(attrs={})
-      SampleModels.samplers[self].sample attrs
+    def sample(*args)
+      sampler = SampleModels.samplers[self]
+      sampler.sample(sampler.attrs_from_args(*args))
     end
   end
 end

@@ -496,3 +496,23 @@ describe 'Model with a polymorphic belongs-to association' do
     assert_not_equal Bookmark, bookmark.bookmarkable.class
   end
 end
+
+describe 'Model with a named sample' do
+  it 'should fill the default fields' do
+    bp = BlogPost.sample :funny
+    assert_equal 'Funny haha', bp.title
+    assert_equal 3.0, bp.average_rating
+  end
+  
+  it 'should allow you to override fields' do
+    bp = BlogPost.sample :funny, :average_rating => 4.0
+    assert_equal 'Funny haha', bp.title
+    assert_equal 4.0, bp.average_rating
+  end
+  
+  it 'should let you create_sample too' do
+    bp1 = BlogPost.sample :funny
+    bp2 = BlogPost.create_sample :funny
+    assert_not_equal bp1, bp2
+  end
+end

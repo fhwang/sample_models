@@ -203,6 +203,8 @@ end
 
 SampleModels.configure BlogPost do |bp|
   bp.published_at.force_unique
+  
+  bp.funny_sample :title => 'Funny haha', :average_rating => 3.0
 end
 
 SampleModels.configure Category do |category|
