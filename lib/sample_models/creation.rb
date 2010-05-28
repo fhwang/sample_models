@@ -4,14 +4,18 @@ module SampleModels
       @sampler, @attrs = sampler, attrs
     end
     
-    def any_sample
-      SampleModels.samplers.values.map(&:model_class).detect { |m|
-        m != @sampler.model_class
-      }.sample
-    end
-    
     def model
       SampleModels.models[@sampler.model_class]
+    end
+    
+    def polymorphic_assoc_value(assoc)
+      if klass = @sampler.polymorphic_default_classes[assoc.name]
+        klass.sample
+      else
+        SampleModels.samplers.values.map(&:model_class).detect { |m|
+          m != @sampler.model_class
+        }.sample
+      end
     end
     
     def run
@@ -80,7 +84,7 @@ module SampleModels
                attrs.has_key?(assoc.association_foreign_key)
           if assoc.options[:polymorphic]
             needs_another_save = true
-            instance.send "#{assoc.name}=", any_sample
+            instance.send "#{assoc.name}=", polymorphic_assoc_value(assoc)
           elsif @sampler.model_class != assoc.klass
             needs_another_save = true
             instance.send "#{assoc.name}=", assoc.klass.sample

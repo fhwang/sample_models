@@ -53,6 +53,10 @@ module SampleModels
         @sampler, @attribute = sampler, attribute
       end
       
+      def default_class(dc)
+        @sampler.polymorphic_default_classes[@attribute] = dc 
+      end
+      
       def default(default)
         if default.blank? and model.validates_presence_of?(@attribute)
           raise "#{model.name} requires #{@attribute} to not be blank"

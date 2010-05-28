@@ -62,6 +62,11 @@ def initialize_db
         show.integer 'network_id', 'subscription_price'
         show.string  'name'
       end
+      
+      create_table 'subscriptions', :force => true do |subscription|
+        subscription.integer 'subscribable_id', 'user_id'
+        subscription.string  'subscribable_type'
+      end
 
       create_table "tags", :force => true do |t|
         t.string  "tag"
@@ -150,6 +155,11 @@ class Show < ActiveRecord::Base
   belongs_to :network
 end
 
+class Subscription < ActiveRecord::Base
+  belongs_to :subscribable, :polymorphic => true
+  belongs_to :user
+end
+
 class Tag < ActiveRecord::Base
   validates_uniqueness_of :tag
   
@@ -209,6 +219,10 @@ end
 
 SampleModels.configure Category do |category|
   category.parent.default nil
+end
+
+SampleModels.configure Subscription do |sub|
+  sub.subscribable.default_class BlogPost
 end
 
 SampleModels.configure Video do |video|

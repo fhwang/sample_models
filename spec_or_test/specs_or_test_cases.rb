@@ -495,6 +495,11 @@ describe 'Model with a polymorphic belongs-to association' do
     assert_equal ActiveRecord::Base, bookmark.bookmarkable.class.superclass
     assert_not_equal Bookmark, bookmark.bookmarkable.class
   end
+  
+  it 'should allow you to constrain which classes will be used by default for the polymorphic type' do
+    sub = Subscription.create_sample
+    assert_equal 'BlogPost', sub.subscribable_type
+  end
 end
 
 describe 'Model with a named sample' do

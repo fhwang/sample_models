@@ -18,12 +18,14 @@ module SampleModels
     end
     
     attr_accessor :before_save
-    attr_reader   :configured_default_attrs, :model_class, :named_sample_attrs
+    attr_reader   :configured_default_attrs, :model_class, :named_sample_attrs,
+                  :polymorphic_default_classes
     
     def initialize(model_class)
       @model_class = model_class
       @configured_default_attrs = {}
       @named_sample_attrs = HashWithIndifferentAccess.new
+      @polymorphic_default_classes = HashWithIndifferentAccess.new
     end
     
     def attrs_from_args(*args)
