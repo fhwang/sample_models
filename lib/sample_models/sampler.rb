@@ -33,10 +33,19 @@ module SampleModels
         attrs = named_sample_attrs[args.shift]
         attrs = attrs.merge(args.first) unless args.empty?
         attrs
-      elsif !args.empty?
-        args.first.clone
       else
-        {}
+        attrs = args.last.is_a?(Hash) ? args.pop : {}
+        args.each do |associated_value|
+          assocs = @model_class.reflect_on_all_associations.select { |a|
+            a.klass == associated_value.class
+          }
+          if assocs.size == 1
+            attrs[assocs.first.name] = associated_value
+          else
+            raise "Not sure what to do with associated value #{associated_value.inspect}"
+          end
+        end
+        attrs
       end
     end
     

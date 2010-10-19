@@ -184,6 +184,13 @@ describe 'Model with a belongs_to association' do
     show2 = Show.sample :name => "Don't go there"
     assert_not_nil show2.network
   end
+  
+  it 'should assign that belongs-to association if a value is passed in as the first argument' do
+    user = User.create_sample
+    blog_post = BlogPost.sample(user, :title => 'some title')
+    assert_equal user, blog_post.user
+    assert_equal 'some title', blog_post.title
+  end
 end
 
 describe 'Model with a belongs_to association of the same class' do
