@@ -71,7 +71,14 @@ module SampleModels
     
     def set_attrs_based_on_validations(attrs)
       model.validation_collections.each do |field, validation_collection|
-        unless attrs.has_key?(field)
+        assoc_key = nil
+        if assoc = model.belongs_to_associations.detect { |a|
+          a.association_foreign_key == field.to_s
+        }
+          assoc_key = assoc.name
+        end
+        unless attrs.has_key?(field) ||
+               (assoc_key && attrs.has_key?(assoc_key))
           attrs[field] = validation_collection.satisfying_value
         end
       end
