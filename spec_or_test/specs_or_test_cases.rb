@@ -174,6 +174,8 @@ describe 'Model with a belongs_to association' do
     User.destroy_all
     blog_post2 = BlogPost.sample
     assert blog_post2.user
+    blog_post2.reload
+    assert blog_post2.user
     blog_post3 = BlogPost.sample :name => 'funny'
     assert blog_post3.user
   end

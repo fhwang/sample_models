@@ -1,7 +1,9 @@
 module SampleModels
   class Finder
     def initialize(model, attrs)
-      @model, @attrs = model, attrs.clone
+      @model = model
+      attrs = Sampler.reify_association_hashes @model, attrs.clone
+      @attrs = HashWithIndifferentAccess.new attrs
       @ar_query = ARQuery.new
     end
     
@@ -62,8 +64,6 @@ module SampleModels
     end
 
     def instance
-      @attrs = Sampler.reify_association_hashes @model, @attrs
-      @attrs = HashWithIndifferentAccess.new @attrs
       attach_non_associated_attrs_to_query
       attach_belongs_to_associations_to_query
       @model.has_many_associations.each do |assoc|
