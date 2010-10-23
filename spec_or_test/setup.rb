@@ -52,6 +52,7 @@ def initialize_db
       create_table 'episodes', :force => true do |episode|
         episode.integer 'show_id'
         episode.string  'name'
+        episode.date    'original_air_date'
       end
       
       create_table 'networks', :force => true do |network|
@@ -145,7 +146,7 @@ end
 class Episode < ActiveRecord::Base
   belongs_to :show
   
-  validates_presence_of :show_id
+  validates_presence_of :show_id, :original_air_date
 end
 
 class Network < ActiveRecord::Base

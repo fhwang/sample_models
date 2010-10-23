@@ -550,3 +550,9 @@ describe 'Model with a named sample' do
   end
 end
 
+describe 'Model which validates the presence of a date field' do
+  it 'should assign a value to that field' do
+    episode = Episode.sample
+    assert episode.original_air_date.is_a?(Date)
+  end
+end

@@ -80,7 +80,13 @@ module SampleModels
           value = value.id if value
           value
         else
-          prev_value || "#{@field} #{@sequence_number}"
+          if prev_value.present?
+            prev_value
+          elsif column.type == :date
+            Date.today
+          else
+            "#{@field} #{@sequence_number}"
+          end
         end
       end
       
