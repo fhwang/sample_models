@@ -3,8 +3,12 @@ module SampleModels
     def self.reify_association_hashes(model, attrs)
       a = attrs.clone
       model.belongs_to_associations.each do |assoc|
-        if (value = a[assoc.name]) && value.is_a?(Hash)
-          a[assoc.name] = assoc.klass.sample(value)
+        if value = a[assoc.name]
+          if value.is_a?(Hash)
+            a[assoc.name] = assoc.klass.sample(value)
+          elsif value.is_a?(Array)
+            a[assoc.name] = assoc.klass.sample(*value)
+          end
         end
       end
       model.has_many_associations.each do |assoc|

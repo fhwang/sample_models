@@ -191,6 +191,13 @@ describe 'Model with a belongs_to association' do
     assert_equal user, blog_post.user
     assert_equal 'some title', blog_post.title
   end
+  
+  it 'should allow you to specify that associated records with shortcut associations' do
+    network = Network.sample
+    video = Video.sample(:show => [network, {:name => "Jersey Shore"}])
+    assert_equal network, video.show.network
+    assert_equal "Jersey Shore", video.show.name
+  end
 end
 
 describe 'Model with a belongs_to association of the same class' do
@@ -528,3 +535,4 @@ describe 'Model with a named sample' do
     assert_not_equal bp1, bp2
   end
 end
+
