@@ -82,7 +82,7 @@ module SampleModels
         else
           if prev_value.present?
             prev_value
-          elsif column.type == :date
+          elsif column && column.type == :date
             Date.today
           else
             "#{@field} #{@sequence_number}"

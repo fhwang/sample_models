@@ -329,6 +329,7 @@ describe 'Model with a unique associated attribute' do
   end
 end
 
+
 describe 'Model with a unique scoped associated attribute' do
   it 'should create a new instance when you create_sample with the same scope variable as before' do
     video_fav1 = VideoFavorite.sample
@@ -556,3 +557,11 @@ describe 'Model which validates the presence of a date field' do
     assert episode.original_air_date.is_a?(Date)
   end
 end
+
+describe 'Model with a required accessor' do
+  it 'should assign that accessor' do
+    user_with_password = UserWithPassword.sample
+    assert user_with_password.password.present?
+  end
+end
+

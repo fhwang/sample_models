@@ -78,6 +78,9 @@ def initialize_db
         user.string  'email', 'gender', 'homepage', 'login', 'password'
       end
       
+      create_table 'user_with_passwords', :force => true do |user|
+      end
+      
       create_table 'videos', :force => true do |video|
         video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
       end
@@ -177,6 +180,12 @@ class User < ActiveRecord::Base
   validates_uniqueness_of   :email, :login, :case_sensitive => false
 end
 
+class UserWithPassword < ActiveRecord::Base
+  attr_accessor :password
+  
+  validates_presence_of :password
+end
+
 class Video < ActiveRecord::Base
   belongs_to :show
   belongs_to :network
@@ -184,7 +193,7 @@ class Video < ActiveRecord::Base
   
   def validate
     if episode && episode.show_id != show_id
-      errors.add "Video needs same show as the episode"
+      errors.add "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
     end
   end
 end
