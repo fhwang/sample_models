@@ -55,6 +55,12 @@ module SampleModels
         @validations[type] = config
       end
       
+      def association
+        @model.belongs_to_associations.detect { |a|
+          a.association_foreign_key.to_sym == @field.to_sym
+        }
+      end
+      
       def column
         @model.columns.detect { |c| c.name == @field.to_s }
       end
@@ -67,18 +73,19 @@ module SampleModels
         @validations.has_key?(:validates_uniqueness_of)
       end
       
+      def satisfying_present_associated_value
+        value = if includes_uniqueness?
+          association.klass.create_sample
+        else
+          association.klass.first || association.klass.sample
+        end
+        value = value.id if value
+        value
+      end
+      
       def satisfying_present_value(prev_value)
-        assoc = @model.belongs_to_associations.detect { |a|
-          a.association_foreign_key.to_sym == @field.to_sym
-        }
-        if assoc
-          value = if includes_uniqueness?
-            assoc.klass.create_sample
-          else
-            assoc.klass.first || assoc.klass.sample
-          end
-          value = value.id if value
-          value
+        if association
+          satisfying_present_associated_value
         else
           if prev_value.present?
             prev_value
