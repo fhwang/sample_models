@@ -79,12 +79,12 @@ module SampleModels
   module ARClassMethods
     def create_sample(*args)
       sampler = SampleModels.samplers[self]
-      sampler.create_sample(sampler.attrs_from_args(*args))
+      sampler.create_sample(*args)
     end
     
     def sample(*args)
       sampler = SampleModels.samplers[self]
-      sampler.sample(sampler.attrs_from_args(*args))
+      sampler.sample(*args)
     end
   end
 end

@@ -15,6 +15,16 @@ module SampleModels
       @model_class
     end
     
+    def associations(klass)
+      @model_class.reflect_on_all_associations.select { |a|
+        begin
+          a.klass == klass
+        rescue NameError
+          false
+        end
+      }
+    end
+    
     def belongs_to_associations
       @model_class.reflect_on_all_associations.select { |assoc|
         assoc.macro == :belongs_to

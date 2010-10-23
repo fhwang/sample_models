@@ -1,15 +1,23 @@
 module SampleModels
   class Sampler
-    def self.reify_association_hashes(model, attrs)
-      a = attrs.clone
+    def self.reified_belongs_to_associations(model, attrs)
+      assocs = {}
       model.belongs_to_associations.each do |assoc|
-        if value = a[assoc.name]
+        if value = attrs[assoc.name]
           if value.is_a?(Hash)
-            a[assoc.name] = assoc.klass.sample(value)
+            assocs[assoc.name] = assoc.klass.sample(value)
           elsif value.is_a?(Array)
-            a[assoc.name] = assoc.klass.sample(*value)
+            assocs[assoc.name] = assoc.klass.sample(*value)
           end
         end
+      end
+      assocs
+    end
+    
+    def self.reify_association_hashes(model, attrs)
+      a = attrs.clone
+      reified_belongs_to_associations(model, attrs).each do |name, value|
+        a[name] = value
       end
       model.has_many_associations.each do |assoc|
         if values = a[assoc.name]
@@ -32,21 +40,34 @@ module SampleModels
       @polymorphic_default_classes = HashWithIndifferentAccess.new
     end
     
-    def attrs_from_args(*args)
+    def create_sample(*args)
+      attrs = preprocessed_attributes(*args)
+      Creation.new(self, attrs).run
+    end
+    
+    def fix_deleted_associations(instance, orig_attrs)
+      needs_save = false
+      model.belongs_to_associations.each do |assoc|
+        if instance.send(assoc.primary_key_name) && 
+           !instance.send(assoc.name)
+         instance.send("#{assoc.name}=", assoc.klass.sample)
+         needs_save = true
+        end
+      end
+      save!(instance, orig_attrs) if needs_save
+    end
+    
+    def model
+      SampleModels.models[@model_class]
+    end
+    
+    def preprocessed_attributes(*args)
       if args.first.is_a?(Symbol)
-        attrs = named_sample_attrs[args.shift]
-        attrs = attrs.merge(args.first) unless args.empty?
-        attrs
+        preprocessed_named_sample_attrs(args)
       else
         attrs = args.last.is_a?(Hash) ? args.pop : {}
         args.each do |associated_value|
-          assocs = @model_class.reflect_on_all_associations.select { |a|
-            begin
-              a.klass == associated_value.class
-            rescue NameError
-              false
-            end
-          }
+          assocs = model.associations(associated_value.class)
           if assocs.size == 1
             attrs[assocs.first.name] = associated_value
           else
@@ -57,26 +78,17 @@ module SampleModels
       end
     end
     
-    def create_sample(attrs)
-      Creation.new(self, attrs).run
+    def preprocessed_named_sample_attrs(args)
+      attrs = named_sample_attrs[args.shift]
+      attrs = attrs.merge(args.first) unless args.empty?
+      attrs
     end
     
-    def model
-      SampleModels.models[@model_class]
-    end
-    
-    def sample(attrs)
+    def sample(*args)
+      attrs = preprocessed_attributes(*args)
       instance = Finder.new(model, attrs).instance
       if instance
-        needs_save = false
-        model.belongs_to_associations.each do |assoc|
-          if instance.send(assoc.primary_key_name) && 
-             !instance.send(assoc.name)
-           instance.send("#{assoc.name}=", assoc.klass.sample)
-           needs_save = true
-          end
-        end
-        save!(instance, attrs) if needs_save
+        fix_deleted_associations(instance, attrs)
       else
         instance = create_sample attrs
       end
