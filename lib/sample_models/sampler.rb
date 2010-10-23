@@ -41,7 +41,11 @@ module SampleModels
         attrs = args.last.is_a?(Hash) ? args.pop : {}
         args.each do |associated_value|
           assocs = @model_class.reflect_on_all_associations.select { |a|
-            a.klass == associated_value.class
+            begin
+              a.klass == associated_value.class
+            rescue NameError
+              false
+            end
           }
           if assocs.size == 1
             attrs[assocs.first.name] = associated_value

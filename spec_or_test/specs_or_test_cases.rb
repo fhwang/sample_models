@@ -510,6 +510,20 @@ describe 'Model with a polymorphic belongs-to association' do
     assert_not_equal Bookmark, bookmark.bookmarkable.class
   end
   
+  it 'should let you specify that association' do
+    blog_post = BlogPost.sample
+    bookmark = Bookmark.sample :bookmarkable => blog_post
+    assert_equal blog_post, bookmark.bookmarkable
+  end
+  
+  it 'should let you specify that association with other leading associations' do
+    user = User.sample
+    blog_post = BlogPost.sample
+    sub = Subscription.sample user, :subscribable => blog_post
+    assert_equal user, sub.user
+    assert_equal blog_post, sub.subscribable
+  end
+  
   it 'should allow you to constrain which classes will be used by default for the polymorphic type' do
     sub = Subscription.create_sample
     assert_equal 'BlogPost', sub.subscribable_type
