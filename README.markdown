@@ -36,49 +36,232 @@ Let's say you've got a set of models that look like this:
     class User < ActiveRecord::Base
       has_many :blog_posts
     
-      validates_email_format_of :email
       validates_inclusion_of    :gender, :in => %w(f m)
       validates_uniqueness_of   :email, :login
+      # from http://github.com/alexdunae/validates_email_format_of
+      validates_email_format_of :email
     end
 
 You can get a valid instance of a BlogPost by calling BlogPost.sample in a test environment:
 
     blog_post1 = BlogPost.sample
-    puts blog_post1.title            # => some non-empty string
-    puts blog_post1.user.is_a?(User) # => true
+    puts blog_post1.title             # => some non-empty string
+    puts blog_post1.user.is_a?(User)  # => true
 
-SampleModels does this without any configuration at all. It does this by reading your class definition to figure out validations and associations for you.
+    user1 = User.sample
+    puts user1.email                  # => will be a valid email 
+    puts user1.gender                 # => will be either 'f' or 'm'
 
+Since SampleModels figures out validations and associations from your ActiveRecord class definitions, it can usually fill in the required values without any configuration at all.
+    
 If you care about specific fields, you can specify them like so:
 
     blog_post2 = BlogPost.sample :title => 'What I ate for lunch'
-    puts blog_post2.title            # => 'What I ate for lunch'
-    puts blog_post2.user.is_a?(User) # => true
+    puts blog_post2.title             # => 'What I ate for lunch'
+    puts blog_post2.user.is_a?(User)  # => true
 
-Often calls to `sample` will return the same record. If you want to 
+You can specify associated records in the sample call:
+
+    bill = User.sample :first_name => 'Bill'
+    bills_post = BlogPost.sample :user => bill
     
-    BlogPost.sample
-    BlogPost.create_sample
-    User.sample
-      # gender will be either f or m, email will be an email address
+    funny = Tag.sample :tag => 'funny'
+    sad = Tag.sample :tag => 'sad'
+    funny_yet_sad = BlogPost.sample :tags => [funny, sad]
     
-    BlogPost.sample :user => {:email => 'john@example.com'}
+You can also specify associated records by passing in hashes or arrays:
 
-    foodie = User.sample :email => 'food-blogger@example.com'
-    BlogPost.sample(foodie, :title => 'What I ate for lunch')
+    bills_post2 = BlogPost.sample :user => {:first_name => 'Bill'}
+    puts bills_post2.user.first_name  # => 'Bill'
     
-    BlogPost.sample :tags => [{:tag => 'funny'}, {:tag => 'sad'}]
-
-
+    funny_yet_sad2 = BlogPost.sample(
+      :tags => [{:tag => 'funny'}, {:tag => 'sad'}]
+    )
+    puts funny_yet_sad2.tags.size     # => 2
     
+You can also specify associated records by passing them in at the beginning of the argument list, if there's only one association that would work with the record's class:
+
+    jane = User.sample :first_name => 'Jane'
+    BlogPost.sample(jane, :title => 'What I ate for lunch')
+
+Instance attributes
+=========================
+
+By default, SampleModels sets each attribute on a record to a non-blank value that matches the database type. They'll often be nonsensical values like "first_name 5", but the assumption is that if that value is important to your test, you can specify it in your call to `sample`. Non-trivial codebases routinely end up having models with many attributes, and when you find yourself writing a test with that model, you may only care about one or two attributes in that test case. SampleModels aims to let you specify only those important attributes while letting SampleModels take care of everything else.
+
+SampleModels reads your validations to get hints about how to craft an instance that will be valid. The current supported validations are:
+
+validates_email_format_of
+-------------------------
+
+If you use the validates_email_format_of plugin at http://github.com/alexdunae/validates_email_format_of, SampleModels will ensure that the attribute in question is a valid email address.
+
+validates_presence_of
+---------------------
+
+SampleModels already sets values to be non-blank, but this validation comes in handy if you have an attr_accessor:
+
+    class UserWithPassword < ActiveRecord::Base
+      attr_accessor :password
+      
+      validates_presence_of :password
+    end
     
-Setting associations
-====================
+    user_with_password = UserWithPassword.sample
+    puts user_with_password.password  # => Some non-blank string
 
 
+validates_inclusion_of
+----------------------
 
-Hooks
-=====
+SampleModels will set the attribute to one of the specified values.
 
+
+validates_uniqueness_of
+-----------------------
+
+SampleModels will ensure that new instances will have different values for attributes where uniqueness is required, as discussed below under "New records vs. old records."
+
+
+New records vs. old records
+===========================
+
+Most of the time, consecutive calls to `sample` will return the same record, because this is marginally faster, and the design assumption is that if you're calling `sample` you don't care which instance you get as long as it satisfies the attributes you specified.
+
+    user1 = User.sample
+    user2 = User.sample
+    puts (user1 == user2)   # probably true
+    
+    rick1 = User.sample :first_name => 'Rick'
+    puts (user1 == rick1)   # probably false, but you never know
+    
+    rick2 = User.sample :first_name => 'Rick'
+    puts (rick1 == rick2)   # probably true
+    
+If having a distinct record is important to the test, you should call `create_sample`, which always saves a new record in the DB and returns it.
+
+    blog_post1 = BlogPost.sample
+    blog_post2 = BlogPost.create_sample
+    puts (blog_post1 == blog_post2)   # will always be false
+
+If the class validates the uniqueness of a field, that field will always be distinct for every new instance returned by `create_sample`.
+
+    tag1 = Tag.sample
+    tag2 = Tag.create_sample
+    puts (tag1 == tag2)           # will always be false
+    puts (tag1.tag == tag2.tag)   # will always be false, because Tag validates
+                                  # the uniqueness of the `tag` attribute
+
+Associations
+============
+
+If your application has an extensive data model, setting up associations for a test case can be an extremely tedious endeavor. SampleModels aims to make this process easy on the programmer and easy on the reader with a number of features.
+
+Belongs-to associations
+-----------------------
+As demonstrated above, belongs_to associations are automatically set like any other attribute:
+
+    blog_post = BlogPost.sample
+    puts blog_post.user.is_a?(User)   # => true
+    
+You can also specify these associations as if you were calling `new` or `create!`:
+
+    kelley = User.sample :first_name => 'Kelley'
+    BlogPost.sample :user => kelley
+    BlogPost.sample :user_id => kelley.id
+
+If you want, you can simply specify the record at the beginning of the argument list for `sample` or `create_sample`, and SampleModels will assign them to the appropriate association, as long as there's only one association that fits the class.
+
+    kim = User.sample :first_name => 'Kim'
+    BlogPost.sample(kim, :title => 'funny')
+   
+You can do this with multiple belongs-to associations:
+    
+    class Network < ActiveRecord::Base
+    end
+    
+    class Show < ActiveRecord::Base
+    end
+        
+    class Video < ActiveRecord::Base
+      belongs_to :show
+      belongs_to :network
+    end
+    
+    amc = Network.sample :name => 'AMC'
+    mad_men = Show.sample :name => 'Mad Men'
+    video = Video.sample(amc, mad_men, :name => 'The Suitcase')
+    
+If you want, you can simply specify the important attributes of the associated value, and SampleModels will stitch it all together for you:
+
+    blog_post = BlogPost.sample :user => {:first_name => 'Bill'}
+    puts blog_post.user.first_name  # => 'Bill'
+
+You can combine the two syntaxes in deeper associations:
+
+    bb_episode = Video.sample(:show => [amc, {:name => 'Breaking Bad'}])
+    puts bb_episode.network.name  # => 'AMC'
+    puts bb_episode.show.name     # => 'Breaking Bad'
+
+Polymorphic belongs-to associations
+-----------------------------------
+
+In the case of a polymorphic belongs-to association, SampleModels will attach any record it can find, of any model class.
+
+    class Bookmark < ActiveRecord::Base
+      belongs_to :bookmarkable, :polymorphic => true
+    end
+    
+    bookmark = Bookmark.sample
+    puts bookmark.bookmarkable.class  # could be any model class
+    
+Of course, you can specify the polymorphic association yourself if that's important to the test.
+
+    blog_post = BlogPost.sample :title => 'Read me later'
+    Bookmark.sample :bookmarkable => blog_post
+    
+You can also configure the default class of this polymorphic association with `default_class`, explained below under "Configuration".    
+
+Has-many associations
+---------------------
+
+You can set a has-many association with an array of instances, as you'd do with `new` or `create!`:
+
+    funny = Tag.sample :tag => 'funny'
+    sad = Tag.sample :tag => 'sad'
+    funny_yet_sad1 = BlogPost.sample :tags => [funny, sad]
+    
+You can also pass hashes to specify the records:
+
+    funny_yet_sad2 = BlogPost.sample(
+      :tags => [{:tag => 'funny'}, {:tag => 'sad'}]
+    )
+    
+Or you can combine the two if that's more convenient:
+    
+    funny_yet_sad3 = BlogPost.sample(:tags => [{:tag => 'sad'}, funny])
+
+Configuration
+=============
+
+The aim of SampleModels is to require as little configuration as possible -- you'll typically find that most of your models won't need any configuration at all. However, there are a few hooks for when you're trying to accommodate advanced creational behavior.
+
+before_save
+-----------
+(can have sample_attributes)
+
+force_unique
+------------
+
+default
+-------
+strongly encourage not to try to get too clever with these
+
+default_class
+-------------
+for polymorphic associations
+
+Named samples
+=============
 
 Copyright (c) 2010 Francis Hwang, released under the MIT license
