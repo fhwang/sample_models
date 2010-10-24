@@ -181,6 +181,7 @@ You can do this with multiple belongs-to associations:
     end
     
     class Show < ActiveRecord::Base
+      belongs_to :network
     end
         
     class Video < ActiveRecord::Base
@@ -200,7 +201,7 @@ If you want, you can simply specify the important attributes of the associated v
 You can combine the two syntaxes in deeper associations:
 
     bb_episode = Video.sample(:show => [amc, {:name => 'Breaking Bad'}])
-    puts bb_episode.network.name  # => 'AMC'
+    puts bb_episode.show.network.name  # => 'AMC'
     puts bb_episode.show.name     # => 'Breaking Bad'
 
 Polymorphic belongs-to associations
