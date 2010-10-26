@@ -87,19 +87,19 @@ You can also specify associated records by passing them in at the beginning of t
 Instance attributes
 =========================
 
-By default, SampleModels sets each attribute on a record to a non-blank value that matches the database type. They'll often be nonsensical values like "first_name 5", but the assumption is that if that value is important to your test, you can specify it in your call to `sample`. Non-trivial codebases routinely end up having models with many attributes, and when you find yourself writing a test with that model, you may only care about one or two attributes in that test case. SampleModels aims to let you specify only those important attributes while letting SampleModels take care of everything else.
+By default, SampleModels sets each attribute on a record to a non-blank value that matches the database type. They'll often be nonsensical values like "first_name 5", but the assumption is that if you didn't specify a value, you don't really care what it is as long as it validates. Non-trivial codebases routinely end up having models with many attributes, and when you find yourself writing a test with that model, you may only care about one or two attributes in that test case. SampleModels aims to let you specify only those important attributes while letting SampleModels take care of everything else.
 
 SampleModels reads your validations to get hints about how to craft an instance that will be valid. The current supported validations are:
 
 validates_email_format_of
 -------------------------
 
-If you use the validates_email_format_of plugin at http://github.com/alexdunae/validates_email_format_of, SampleModels will ensure that the attribute in question is a valid email address.
+If you use the validates_email_format_of plugin at [http://github.com/alexdunae/validates_email_format_of](http://github.com/alexdunae/validates_email_format_of), SampleModels will ensure that the attribute in question is a valid email address.
 
 validates_presence_of
 ---------------------
 
-SampleModels already sets values to be non-blank, but this validation comes in handy if you have an attr_accessor:
+SampleModels already sets values to be non-blank, but this validation comes in handy if you have an `attr_accessor`:
 
     class UserWithPassword < ActiveRecord::Base
       attr_accessor :password
@@ -256,6 +256,12 @@ With `before_save` you can specify a block that runs before the record is saved.
     class Appointment < ActiveRecord::Base
       belongs_to :calendar
       belongs_to :user
+      
+      def validate
+        if user_id != calendar.user_id
+          errors.add_to_base("Calendar has a different user than me")
+        end
+      end
     end
     
     # app/models/calendar.rb
@@ -271,7 +277,7 @@ With `before_save` you can specify a block that runs before the record is saved.
       end
     end
 
-You can also take a 2nd argument, which will pass in the hash that was used during the call to `sample` or `create_sample`.
+You can also take a second argument, which will pass in the hash that was used during the call to `sample` or `create_sample`.
 
     SampleModels.configure(Appointment) do |appt|
       appt.before_save do |appt_record, sample_attrs|
@@ -293,7 +299,7 @@ default
       video.view_count.default 0
     end
     
-I strongly encourage you to not get too clever with these defaults. It's easy to tell yourself "Oh, this should be the default value everywhere" -- and then a day later find yourself wanting to override the default all over the place. In many cases you many want to used named samples (see below) instead.
+A word to the wise: Be sparing with these global defaults. It's easy to tell yourself "Oh, this should be the default value everywhere" -- and then a day later find yourself wanting to override the default all over the place. In many cases you many want to used named samples (see below) instead.
 
 default_class
 -------------
@@ -333,5 +339,7 @@ You can override individual attributes, as well:
     bp3 = BlogPost.sample :funny, :average_rating => 4.0
     puts bp3.average_rating   # => 4.0
 
+About
+=====
 
-Copyright (c) 2010 Francis Hwang, released under the MIT license
+Copyright (c) 2010 Francis Hwang, released under the MIT license.
