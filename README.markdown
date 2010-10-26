@@ -249,20 +249,89 @@ The aim of SampleModels is to require as little configuration as possible -- you
 
 before_save
 -----------
-(can have sample_attributes)
 
-force_unique
-------------
+With `before_save` you can specify a block that runs before the record is saved. For example, let's say you've got Users, Appointments, and Calendars, and an Appointment should have the same User as the Calendar it belongs to. You can set this behavior with `before_save`:
+
+    # app/models/appointment.rb
+    class Appointment < ActiveRecord::Base
+      belongs_to :calendar
+      belongs_to :user
+    end
+    
+    # app/models/calendar.rb
+    class Calendar < ActiveRecord::Base
+      has_many    :appointments
+      belongs_to  :user
+    end
+    
+    # test/test_helper.rb
+    SampleModels.configure(Appointment) do |appt|
+      appt.before_save do |appt_record|
+        appt_record.user_id = appt_record.calendar.user_id
+      end
+    end
+
+You can also take a 2nd argument, which will pass in the hash that was used during the call to `sample` or `create_sample`.
+
+    SampleModels.configure(Appointment) do |appt|
+      appt.before_save do |appt_record, sample_attrs|
+        unless sample_attrs.has_key?(:user) or sample_attrs.has_key?(:user_id)
+          appt_record.user_id = appt_record.calendar.user_id
+        end
+      end
+    end
 
 default
 -------
-strongly encourage not to try to get too clever with these
+`default` will set default values for the field in question.
+
+    SampleModels.configure(Category) do |category|
+      category.parent.default nil
+    end
+
+    SampleModels.configure(Video) do |video|
+      video.view_count.default 0
+    end
+    
+I strongly encourage you to not get too clever with these defaults. It's easy to tell yourself "Oh, this should be the default value everywhere" -- and then a day later find yourself wanting to override the default all over the place. In many cases you many want to used named samples (see below) instead.
 
 default_class
 -------------
-for polymorphic associations
+By default, SampleModels fills polymorphic associations with any record, chosen practically at random. You may want to specify this to a more sensible default:
+
+    SampleModels.configure(Bookmark) do |bookmark|
+      bookmark.bookmarkable.default_class BlogPost
+    end
+
+force_unique
+------------
+Use `force_unique` if you want to ensure that for every newly created instance, the field will be unique. This has the same effect as `validates_uniqueness_of`, but won't change how production code behaves.
+
+    SampleModels.configure(BlogPost) do |bp|
+      bp.published_at.force_unique
+    end
+
 
 Named samples
 =============
+Named samples can be used to pre-set values for commonly used combinations of attributes.
+
+    SampleModels.configure(BlogPost) do |bp|
+      bp.funny_sample :title => 'Laugh already', :average_rating => 3.0
+      bp.sad_sample :title => 'Boo hoo', :average_rating => 2.0
+    end
+    
+    bp1 = BlogPost.sample :funny
+    puts bp1.title   # => 'Laugh already'
+
+    bp2 = BlogPost.create_sample :funny
+    puts bp2.title      # => 'Laugh already'
+    puts (bp1 == bp2)   # => false
+    
+You can override individual attributes, as well:
+
+    bp3 = BlogPost.sample :funny, :average_rating => 4.0
+    puts bp3.average_rating   # => 4.0
+
 
 Copyright (c) 2010 Francis Hwang, released under the MIT license
