@@ -35,6 +35,7 @@ A library for making it extremely fast for Rails developers to set up and save A
      "lib/sample_models/finder.rb",
      "lib/sample_models/model.rb",
      "lib/sample_models/sampler.rb",
+     "sample_models.gemspec",
      "spec/sample_models_spec.rb",
      "spec_or_test/database.yml",
      "spec_or_test/setup.rb",
