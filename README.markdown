@@ -5,7 +5,7 @@ A library for making it extremely fast for Rails developers to set up and save A
 
 * meet all your validations automatically
 * only make you specify the attributes you care about
-* give you a rich set of features so you can specify associated values as concisely as possible
+* give you a rich set of features so you can specify associations as concisely as possible
 * do this with as little configuration as possible
 
 Feature overview
@@ -56,22 +56,22 @@ Since SampleModels figures out validations and associations from your ActiveReco
     
 If you care about specific fields, you can specify them like so:
 
-    blog_post2 = BlogPost.sample :title => 'What I ate for lunch'
+    blog_post2 = BlogPost.sample(:title => 'What I ate for lunch')
     puts blog_post2.title             # => 'What I ate for lunch'
     puts blog_post2.user.is_a?(User)  # => true
 
 You can specify associated records in the sample call:
 
-    bill = User.sample :first_name => 'Bill'
-    bills_post = BlogPost.sample :user => bill
+    bill = User.sample(:first_name => 'Bill')
+    bills_post = BlogPost.sample(:user => bill)
     
-    funny = Tag.sample :tag => 'funny'
-    sad = Tag.sample :tag => 'sad'
-    funny_yet_sad = BlogPost.sample :tags => [funny, sad]
+    funny = Tag.sample(:tag => 'funny')
+    sad = Tag.sample(:tag => 'sad')
+    funny_yet_sad = BlogPost.sample(:tags => [funny, sad])
     
 You can also specify associated records by passing in hashes or arrays:
 
-    bills_post2 = BlogPost.sample :user => {:first_name => 'Bill'}
+    bills_post2 = BlogPost.sample(:user => {:first_name => 'Bill'})
     puts bills_post2.user.first_name  # => 'Bill'
     
     funny_yet_sad2 = BlogPost.sample(
@@ -81,7 +81,7 @@ You can also specify associated records by passing in hashes or arrays:
     
 You can also specify associated records by passing them in at the beginning of the argument list, if there's only one association that would work with the record's class:
 
-    jane = User.sample :first_name => 'Jane'
+    jane = User.sample(:first_name => 'Jane')
     BlogPost.sample(jane, :title => 'What I ate for lunch')
 
 Instance attributes
@@ -132,10 +132,10 @@ Most of the time, consecutive calls to `sample` will return the same record, bec
     user2 = User.sample
     puts (user1 == user2)   # probably true
     
-    rick1 = User.sample :first_name => 'Rick'
+    rick1 = User.sample(:first_name => 'Rick')
     puts (user1 == rick1)   # probably false, but you never know
     
-    rick2 = User.sample :first_name => 'Rick'
+    rick2 = User.sample(:first_name => 'Rick')
     puts (rick1 == rick2)   # probably true
     
 If having a distinct record is important to the test, you should call `create_sample`, which always saves a new record in the DB and returns it.
@@ -166,13 +166,13 @@ As demonstrated above, belongs_to associations are automatically set like any ot
     
 You can also specify these associations as if you were calling `new` or `create!`:
 
-    kelley = User.sample :first_name => 'Kelley'
-    BlogPost.sample :user => kelley
-    BlogPost.sample :user_id => kelley.id
+    kelley = User.sample(:first_name => 'Kelley')
+    BlogPost.sample(:user => kelley)
+    BlogPost.sample(:user_id => kelley.id)
 
 If you want, you can simply specify the record at the beginning of the argument list for `sample` or `create_sample`, and SampleModels will assign them to the appropriate association, as long as there's only one association that fits the class.
 
-    kim = User.sample :first_name => 'Kim'
+    kim = User.sample(:first_name => 'Kim')
     BlogPost.sample(kim, :title => 'funny')
    
 You can do this with multiple belongs-to associations:
@@ -189,13 +189,13 @@ You can do this with multiple belongs-to associations:
       belongs_to :network
     end
     
-    amc = Network.sample :name => 'AMC'
-    mad_men = Show.sample :name => 'Mad Men'
+    amc = Network.sample(:name => 'AMC')
+    mad_men = Show.sample(:name => 'Mad Men')
     video = Video.sample(amc, mad_men, :name => 'The Suitcase')
     
 If you want, you can simply specify the important attributes of the associated value, and SampleModels will stitch it all together for you:
 
-    blog_post = BlogPost.sample :user => {:first_name => 'Bill'}
+    blog_post = BlogPost.sample(:user => {:first_name => 'Bill'})
     puts blog_post.user.first_name  # => 'Bill'
 
 You can combine the two syntaxes in deeper associations:
@@ -218,8 +218,8 @@ In the case of a polymorphic belongs-to association, SampleModels will attach an
     
 Of course, you can specify the polymorphic association yourself if that's important to the test.
 
-    blog_post = BlogPost.sample :title => 'Read me later'
-    Bookmark.sample :bookmarkable => blog_post
+    blog_post = BlogPost.sample(:title => 'Read me later')
+    Bookmark.sample(:bookmarkable => blog_post)
     
 You can also configure the default class of this polymorphic association with `default_class`, explained below under "Configuration".    
 
@@ -228,9 +228,9 @@ Has-many associations
 
 You can set a has-many association with an array of instances, as you'd do with `new` or `create!`:
 
-    funny = Tag.sample :tag => 'funny'
-    sad = Tag.sample :tag => 'sad'
-    funny_yet_sad1 = BlogPost.sample :tags => [funny, sad]
+    funny = Tag.sample(:tag => 'funny')
+    sad = Tag.sample(:tag => 'sad')
+    funny_yet_sad1 = BlogPost.sample(:tags => [funny, sad])
     
 You can also pass hashes to specify the records:
 
@@ -327,16 +327,16 @@ Named samples can be used to pre-set values for commonly used combinations of at
       bp.sad_sample :title => 'Boo hoo', :average_rating => 2.0
     end
     
-    bp1 = BlogPost.sample :funny
+    bp1 = BlogPost.sample(:funny)
     puts bp1.title   # => 'Laugh already'
 
-    bp2 = BlogPost.create_sample :funny
+    bp2 = BlogPost.create_sample(:funny)
     puts bp2.title      # => 'Laugh already'
     puts (bp1 == bp2)   # => false
     
 You can override individual attributes, as well:
 
-    bp3 = BlogPost.sample :funny, :average_rating => 4.0
+    bp3 = BlogPost.sample(:funny, :average_rating => 4.0)
     puts bp3.average_rating   # => 4.0
 
 About
