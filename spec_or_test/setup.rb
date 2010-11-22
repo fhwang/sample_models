@@ -1,7 +1,9 @@
 require 'rubygems'
-require 'active_record'
+gem 'activerecord', ENV['ACTIVE_RECORD_VERSION']
 RAILS_ENV = 'test'
+require 'active_record'
 require 'active_record/base'
+require 'active_support/core_ext/logger'
 require File.dirname(__FILE__) +
         '/vendor/validates_email_format_of/lib/validates_email_format_of'
 require File.dirname(__FILE__) + '/../lib/sample_models'
@@ -105,8 +107,9 @@ class Appointment < ActiveRecord::Base
   
   validates_presence_of :calendar_id, :user_id
   validates_uniqueness_of :start_time
+  validate :validate_calendar_has_same_user_id
   
-  def validate
+  def validate_calendar_has_same_user_id
     if calendar.user_id != user_id
       errors.add "Appointment needs same user as the calendar"
     end
@@ -191,7 +194,9 @@ class Video < ActiveRecord::Base
   belongs_to :network
   belongs_to :episode
   
-  def validate
+  validate :validate_episode_has_same_show_id
+  
+  def validate_episode_has_same_show_id
     if episode && episode.show_id != show_id
       errors.add "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
     end
@@ -247,3 +252,4 @@ SampleModels.configure Video do |video|
   end
   video.view_count.default 0
 end
+

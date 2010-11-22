@@ -36,8 +36,9 @@ module SampleModels
     def initialize(model_class)
       @model_class = model_class
       @configured_default_attrs = {}
-      @named_sample_attrs = HashWithIndifferentAccess.new
-      @polymorphic_default_classes = HashWithIndifferentAccess.new
+      @named_sample_attrs = SampleModels.hash_with_indifferent_access_class.new
+      @polymorphic_default_classes =
+        SampleModels.hash_with_indifferent_access_class.new
     end
     
     def create_sample(*args)

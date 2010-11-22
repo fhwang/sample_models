@@ -1,10 +1,4 @@
 if RAILS_ENV == 'test' # no reason to run this code outside of test mode
-  
-require "#{File.dirname(__FILE__)}/sample_models/creation"
-require "#{File.dirname(__FILE__)}/sample_models/finder"
-require "#{File.dirname(__FILE__)}/sample_models/model"
-require "#{File.dirname(__FILE__)}/sample_models/sampler"
-require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
 
 module SampleModels
   mattr_reader :models
@@ -19,6 +13,14 @@ module SampleModels
 
   def self.configure(model_class, opts ={})
     yield ConfigureRecipient.new(model_class) if block_given?
+  end
+  
+  def self.hash_with_indifferent_access_class
+    if ActiveSupport.const_defined?('HashWithIndifferentAccess')
+      ActiveSupport::HashWithIndifferentAccess
+    else
+      HashWithIndifferentAccess
+    end
   end
 
   protected
@@ -93,25 +95,37 @@ module ActiveRecord
   class Base
     include SampleModels
   end
-  
-  module Validations
-    module ClassMethods
-      [:validates_email_format_of,
-       :validates_inclusion_of, :validates_presence_of, 
-       :validates_uniqueness_of].each do |validation|
-        if method_defined?(validation)
-          define_method "#{validation}_with_sample_models".to_sym do |*args|
-            send "#{validation}_without_sample_models".to_sym, *args
-            SampleModels.models[self].record_validation(
-              validation, *args
-            )
-          end
-          alias_method_chain validation, :sample_models
-        end
-      end
+end
+
+validation_recipients = [ActiveRecord::Validations::ClassMethods]
+if Object.const_defined?('ActiveModel')
+  validation_recipients << ActiveModel::Validations::HelperMethods
+end
+validations_to_intercept = [
+  :validates_email_format_of, :validates_inclusion_of, :validates_presence_of, 
+  :validates_uniqueness_of
+]
+validations_to_intercept.each do |validation|
+  recipient = validation_recipients.detect { |vr|
+    vr.method_defined?(validation)
+  }
+  if recipient
+    method_name = "#{validation}_with_sample_models".to_sym
+    recipient.send(:define_method, method_name) do |*args|
+      send "#{validation}_without_sample_models".to_sym, *args
+      SampleModels.models[self].record_validation(validation, *args)
     end
+    recipient.alias_method_chain validation, :sample_models
+  else
+    raise "Can't find who defines the validation method #{validation}"
   end
 end
+  
+require "#{File.dirname(__FILE__)}/sample_models/creation"
+require "#{File.dirname(__FILE__)}/sample_models/finder"
+require "#{File.dirname(__FILE__)}/sample_models/model"
+require "#{File.dirname(__FILE__)}/sample_models/sampler"
+require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
 
 end # if RAILS_ENV == 'test'
 

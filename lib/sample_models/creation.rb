@@ -2,7 +2,7 @@ module SampleModels
   class Creation
     def initialize(sampler, attrs)
       @sampler = sampler
-      @orig_attrs = HashWithIndifferentAccess.new attrs
+      @orig_attrs = SampleModels.hash_with_indifferent_access_class.new attrs
       @attrs = Attributes.new(@sampler, attrs)
     end
     
@@ -48,7 +48,7 @@ module SampleModels
       save! if needs_another_save
     end
     
-    class Attributes < HashWithIndifferentAccess
+    class Attributes < SampleModels.hash_with_indifferent_access_class
       def initialize(sampler, hash)
         @sampler = sampler
         hash = Sampler.reify_association_hashes model, hash

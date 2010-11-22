@@ -3,21 +3,31 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'rubygems'
 gem 'rspec'
-require 'spec/rake/spectask'
 
-desc 'Default: run specs.'
+ActiveRecordVersions = %w(3.0.1 2.3.10)
+
+desc 'Default: run all tests and specs.'
 task :default => [:test, :spec]
 
 desc "Run all specs"
 task :spec do
-  cmd = "spec spec/sample_models_spec.rb"
-  puts cmd
-  puts `#{cmd}`
+  ActiveRecordVersions.each do |ar_version|
+    ENV['ACTIVE_RECORD_VERSION'] = ar_version
+    cmd = "rspec spec/sample_models_spec.rb"
+    puts ar_version
+    puts cmd
+    puts `#{cmd}`
+  end
 end
 
 desc "Run all tests"
-Rake::TestTask.new do |t|
-  t.test_files = FileList['test/*.rb']
+task :test do
+  ActiveRecordVersions.each do |ar_version|
+    cmd = "ACTIVE_RECORD_VERSION=#{ar_version} ruby test/test_sample_models.rb"
+    puts cmd
+    puts `cd . && #{cmd}`
+    puts
+  end
 end
 
 desc 'Generate documentation for the sample_models plugin.'

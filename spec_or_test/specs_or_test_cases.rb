@@ -35,8 +35,10 @@ describe "Model.sample" do
   end
   
   it "should raise the standard validation error if you break the model's validates_email_format_of validation" do
-    assert_raise(ActiveRecord::RecordInvalid) do
-      User.sample(:email => 'call.me')
+    unless ENV['ACTIVE_RECORD_VERSION'] =~ /^3\./
+      assert_raise(ActiveRecord::RecordInvalid) do
+        User.sample(:email => 'call.me')
+      end
     end
   end
   

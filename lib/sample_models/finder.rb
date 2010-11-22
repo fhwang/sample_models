@@ -3,7 +3,7 @@ module SampleModels
     def initialize(model, attrs)
       @model = model
       attrs = Sampler.reify_association_hashes @model, attrs.clone
-      @attrs = HashWithIndifferentAccess.new attrs
+      @attrs = SampleModels.hash_with_indifferent_access_class.new attrs
       @ar_query = ARQuery.new
     end
     

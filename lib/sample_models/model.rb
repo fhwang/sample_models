@@ -32,7 +32,11 @@ module SampleModels
     end
     
     def construct_finder_sql(*args)
-      @model_class.send(:construct_finder_sql, *args)
+      if @model_class.method(:scoped).arity == -1
+        @model_class.scoped.apply_finder_options(*args).arel.to_sql
+      else
+        @model_class.send(:construct_finder_sql, *args)
+      end
     end
     
     def has_many_associations
