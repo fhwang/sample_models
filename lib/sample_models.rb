@@ -1,5 +1,3 @@
-if RAILS_ENV == 'test' # no reason to run this code outside of test mode
-
 module SampleModels
   mattr_reader :models
   @@models = Hash.new { |h, model_class| 
@@ -126,6 +124,4 @@ require "#{File.dirname(__FILE__)}/sample_models/finder"
 require "#{File.dirname(__FILE__)}/sample_models/model"
 require "#{File.dirname(__FILE__)}/sample_models/sampler"
 require "#{File.dirname(__FILE__)}/../vendor/ar_query/lib/ar_query"
-
-end # if RAILS_ENV == 'test'
 
