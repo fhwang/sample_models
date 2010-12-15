@@ -100,9 +100,11 @@ if Object.const_defined?('ActiveModel')
   validation_recipients << ActiveModel::Validations::HelperMethods
 end
 validations_to_intercept = [
-  :validates_email_format_of, :validates_inclusion_of, :validates_presence_of, 
+  :validates_inclusion_of, :validates_presence_of, 
   :validates_uniqueness_of
 ]
+
+validations_to_intercept << :validates_email_format_of if defined?(ValidatesEmailFormatOf)
 validations_to_intercept.each do |validation|
   recipient = validation_recipients.detect { |vr|
     vr.method_defined?(validation)
