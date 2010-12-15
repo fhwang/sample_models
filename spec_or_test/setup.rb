@@ -1,9 +1,11 @@
 require 'rubygems'
 gem 'activerecord', ENV['ACTIVE_RECORD_VERSION']
+gem "activesupport", ENV['ACTIVE_RECORD_VERSION']
 RAILS_ENV = 'test'
 require 'active_record'
 require 'active_record/base'
 require 'active_support/core_ext/logger'
+
 require File.dirname(__FILE__) +
         '/vendor/validates_email_format_of/lib/validates_email_format_of'
 require File.dirname(__FILE__) + '/../lib/sample_models'

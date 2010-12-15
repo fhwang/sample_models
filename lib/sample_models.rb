@@ -14,11 +14,7 @@ module SampleModels
   end
   
   def self.hash_with_indifferent_access_class
-    if ActiveSupport.const_defined?('HashWithIndifferentAccess')
-      ActiveSupport::HashWithIndifferentAccess
-    else
-      HashWithIndifferentAccess
-    end
+    HashWithIndifferentAccess
   end
 
   protected

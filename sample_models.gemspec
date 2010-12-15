@@ -75,6 +75,7 @@ A library for making it extremely fast for Rails developers to set up and save A
     "spec/sample_models_spec.rb",
      "test/test_sample_models.rb"
   ]
+  s.add_dependancy ["mysql", "rspec"]
 
   if s.respond_to? :specification_version then
     current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION

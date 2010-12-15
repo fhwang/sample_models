@@ -1,7 +1,6 @@
 mysql:
-  adapter: mysql
-  host: localhost
-  username: test
-  password: test
-  database: sample_models_test
+  adapter: sqlite3
+  database: test/db/test.sqlite3
+  pool: 5
+  timeout: 5000
 
