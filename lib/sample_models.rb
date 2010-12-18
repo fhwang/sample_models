@@ -103,6 +103,7 @@ validations_to_intercept = [
   :validates_email_format_of, :validates_inclusion_of, :validates_presence_of, 
   :validates_uniqueness_of
 ]
+optional_interceptions = [:validates_email_format_of]
 validations_to_intercept.each do |validation|
   recipient = validation_recipients.detect { |vr|
     vr.method_defined?(validation)
@@ -115,7 +116,9 @@ validations_to_intercept.each do |validation|
     end
     recipient.alias_method_chain validation, :sample_models
   else
-    raise "Can't find who defines the validation method #{validation}"
+    unless optional_interceptions.include?(validation)
+      raise "Can't find who defines the validation method #{validation}"
+    end
   end
 end
   
