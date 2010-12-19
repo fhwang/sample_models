@@ -55,6 +55,7 @@ A library for making it extremely fast for Rails developers to set up and save A
     gem.email = "francis.hwang@profitably.com"
     gem.homepage = "http://github.com/fhwang/sample_models"
     gem.authors = ["Francis Hwang"]
+    gem.add_development_dependency('rspec')
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
   Jeweler::GemcutterTasks.new

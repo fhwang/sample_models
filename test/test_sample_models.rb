@@ -1,5 +1,5 @@
 require 'test/unit'
-require File.dirname(__FILE__) + "/../spec_or_test/setup"
+require File.expand_path(File.dirname(__FILE__)) + "/../spec_or_test/setup"
 
 # auto-convert specs into tests whoooooha
 @@test_class_sequence = 1
@@ -24,5 +24,5 @@ end
 
 initialize_db
 
-require File.dirname(__FILE__) + "/../spec_or_test/specs_or_test_cases"
+require File.expand_path(File.dirname(__FILE__)) +  "/../spec_or_test/specs_or_test_cases"
 
