@@ -1,5 +1,5 @@
 *~
-test/db/*
+test/db/*.sqlite3
 *.log
 spec/*.log
 pkg/*
