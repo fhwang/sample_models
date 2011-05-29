@@ -1,14 +1,24 @@
-require 'rubygems'
-gem 'activerecord', ENV['ACTIVE_RECORD_VERSION']
-gem "activesupport", ENV['ACTIVE_RECORD_VERSION']
 RAILS_ENV = 'test'
+require 'rubygems'
+require 'bundler'
+begin
+  Bundler.setup(:default, :test)
+rescue Bundler::BundlerError => e
+  $stderr.puts e.message
+  $stderr.puts "Run `bundle install` to install missing gems"
+  exit e.status_code
+end
+require 'test/unit'
+
 require 'active_record'
 require 'active_record/base'
 require 'active_support/core_ext/logger'
+require 'active_support/core_ext/module/attribute_accessors'
+require 'validates_email_format_of'
 
-require File.dirname(__FILE__) +
-        '/vendor/validates_email_format_of/lib/validates_email_format_of'
-require File.dirname(__FILE__) + '/../lib/sample_models'
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+$LOAD_PATH.unshift(File.dirname(__FILE__))
+require 'sample_models'
 
 # Configure ActiveRecord
 config = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
