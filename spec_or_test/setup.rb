@@ -92,6 +92,10 @@ def initialize_db
         user.string  'email', 'gender', 'homepage', 'login', 'password'
       end
       
+      create_table 'user2s', :force => true do |user2|
+        user2.string  'login'
+      end
+      
       create_table 'user_with_passwords', :force => true do |user|
       end
       
@@ -193,6 +197,11 @@ class User < ActiveRecord::Base
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
   validates_uniqueness_of   :email, :login, :case_sensitive => false
+end
+
+class User2 < ActiveRecord::Base
+  validates_presence_of   :login
+  validates_uniqueness_of :login
 end
 
 class UserWithPassword < ActiveRecord::Base

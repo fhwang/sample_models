@@ -57,82 +57,120 @@ module SampleModels
     def validates_presence_of?(attr)
       @validation_collections[attr].includes_presence?
     end
-  
+    
+    def unique?(field, value)
+      !@model_class.first(:conditions => {field => value})
+    end
+    
     class ValidationCollection
       def initialize(model, field)
         @model, @field = model, field
-        @sequence_number = 0
-        @validations = {}
+        @value_streams = []
       end
       
-      def add(type, config)
-        @validations[type] = config
-      end
-      
-      def association
-        @model.belongs_to_associations.detect { |a|
-          a.association_foreign_key.to_sym == @field.to_sym
-        }
-      end
-      
-      def column
-        @model.columns.detect { |c| c.name == @field.to_s }
+      def add(validation_method, config)
+        stream_class_name = validation_method.to_s.camelize + 'ValueStream'
+        if ValidationCollection.const_defined?(stream_class_name)
+          stream_class = ValidationCollection.const_get(stream_class_name)
+          input = @value_streams.last
+          @value_streams << stream_class.new(@model, @field, config, input)
+        end
       end
       
       def includes_presence?
-        @validations.has_key?(:validates_presence_of)
+        @value_streams.any? { |vs| vs.is_a?(ValidatesPresenceOfValueStream) }
       end
       
       def includes_uniqueness?
-        @validations.has_key?(:validates_uniqueness_of)
-      end
-      
-      def satisfying_present_associated_value
-        value = if includes_uniqueness?
-          association.klass.create_sample
-        else
-          association.klass.first || association.klass.sample
-        end
-        value = value.id if value
-        value
-      end
-      
-      def satisfying_present_value(prev_value)
-        if association
-          satisfying_present_associated_value
-        else
-          if prev_value.present?
-            prev_value
-          elsif column && column.type == :date
-            Date.today
-          else
-            "#{@field} #{@sequence_number}"
-          end
-        end
+        @value_streams.any? { |vs| vs.is_a?(ValidatesUniquenessOfValueStream) }
       end
       
       def satisfying_value
-        @sequence_number += 1 if includes_uniqueness?
-        value = nil
-        @validations.each do |type, config|
-          case type
-          when :validates_email_format_of
-            value = "john.doe#{@sequence_number}@example.com"
-          when :validates_inclusion_of
-            value = config[:in].first
-          when :validates_presence_of
-            value = satisfying_present_value(value)
-          end
-        end
-        value = unique_value if value.nil? && includes_uniqueness?
-        value
+        @value_streams.last.satisfying_value if @value_streams.last
       end
       
-      def unique_value
-        if column.type == :string
-          "#{@field.to_s.capitalize} #{@sequence_number}"
-        elsif column.type == :datetime
-          Time.utc(1970, 1, 1) + @sequence_number.days
+      class ValueStream
+        attr_reader :input
+        
+        def initialize(model, field, config, input)
+          @model, @field, @config, @input = model, field, config, input
+          @sequence_number = 0
+        end
+      
+        def column
+          @model.columns.detect { |c| c.name == @field.to_s }
+        end
+        
+        def increment
+          @sequence_number += 1
+          input.increment if input
+        end
+      end
+      
+      class ValidatesEmailFormatOfValueStream < ValueStream
+        def satisfying_value
+          "john.doe#{@sequence_number}@example.com"
+        end
+      end
+      
+      class ValidatesInclusionOfValueStream < ValueStream
+        def satisfying_value
+          @config[:in].first
+        end
+      end
+      
+      class ValidatesPresenceOfValueStream < ValueStream
+        def association
+          @model.belongs_to_associations.detect { |a|
+            a.association_foreign_key.to_sym == @field.to_sym
+          }
+        end
+        
+        def increment
+          if association
+            association.klass.create_sample
+          else
+            super
+          end
+        end
+      
+        def satisfying_associated_value
+          value = association.klass.last || association.klass.sample
+          value = value.id if value
+          value
+        end
+      
+        def satisfying_value
+          prev_value = input.satisfying_value if input
+          if association
+            satisfying_associated_value
+          else
+            if prev_value.present?
+              prev_value
+            elsif column && column.type == :date
+              Date.today + @sequence_number
+            elsif column && column.type == :datetime
+              Time.utc(1970, 1, 1) + @sequence_number.days
+            elsif column && column.type == :integer
+              @sequence_number
+            else
+              "#{@field} #{@sequence_number}"
+            end
+          end
+        end
+      end
+      
+      class ValidatesUniquenessOfValueStream < ValueStream
+        def satisfying_value
+          value = input.satisfying_value if input
+          if !@model.unique?(@field, value)
+            my_input = input || ValidatesPresenceOfValueStream.new(@model, @field, nil, @input)
+            until @model.unique?(@field, value)
+              my_input.increment
+              value = my_input.satisfying_value
+            end
+          end
+          value
         end
       end
     end

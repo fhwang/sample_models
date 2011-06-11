@@ -91,6 +91,7 @@ describe "Model.sample" do
   end
 end
 
+
 describe 'Model with a belongs_to association' do
   it 'should be associated with the belongs_to recipient by default' do
     blog_post = BlogPost.sample
@@ -333,7 +334,6 @@ describe 'Model with a unique associated attribute' do
   end
 end
 
-
 describe 'Model with a unique scoped associated attribute' do
   it 'should create a new instance when you create_sample with the same scope variable as before' do
     video_fav1 = VideoFavorite.sample
@@ -541,13 +541,13 @@ describe 'Model with a named sample' do
     assert_equal 'Funny haha', bp.title
     assert_equal 3.0, bp.average_rating
   end
-  
+
   it 'should allow you to override fields' do
     bp = BlogPost.sample :funny, :average_rating => 4.0
     assert_equal 'Funny haha', bp.title
     assert_equal 4.0, bp.average_rating
   end
-  
+
   it 'should let you create_sample too' do
     bp1 = BlogPost.sample :funny
     bp2 = BlogPost.create_sample :funny
@@ -566,6 +566,13 @@ describe 'Model with a required accessor' do
   it 'should assign that accessor' do
     user_with_password = UserWithPassword.sample
     assert user_with_password.password.present?
+  end
+end
+
+describe 'Model which validates the presence and uniqueness of a string field' do
+  it "should not get tripped up by a pre-existing record" do
+    User2.create!(:login => 'login 1')
+    User2.create_sample
   end
 end
 
