@@ -32,8 +32,9 @@ module SampleModels
     end
     
     def construct_finder_sql(*args)
-      if @model_class.method(:scoped).arity == -1
-        @model_class.scoped.apply_finder_options(*args).arel.to_sql
+      if @model_class.method(:scoped).arity == -1 && 
+         @model_class.scoped(nil).respond_to?(:apply_finder_options)
+        @model_class.scoped(nil).apply_finder_options(*args).arel.to_sql
       else
         @model_class.send(:construct_finder_sql, *args)
       end
