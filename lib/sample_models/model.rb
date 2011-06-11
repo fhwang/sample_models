@@ -72,8 +72,12 @@ module SampleModels
         stream_class_name = validation_method.to_s.camelize + 'ValueStream'
         if ValidationCollection.const_defined?(stream_class_name)
           stream_class = ValidationCollection.const_get(stream_class_name)
-          input = @value_streams.last
-          @value_streams << stream_class.new(@model, @field, config, input)
+          if stream_class == ValidatesUniquenessOfValueStream
+            @validates_uniqueness_config = config
+          else
+            input = @value_streams.last
+            @value_streams << stream_class.new(@model, @field, config, input)
+          end
         end
       end
       
@@ -86,6 +90,13 @@ module SampleModels
       end
       
       def satisfying_value
+        if @validates_uniqueness_config
+          input = @value_streams.last
+          @value_streams << ValidatesUniquenessOfValueStream.new(
+            @model, @field, @validates_uniqueness_config, input
+          )
+          @validates_uniqueness_config = nil
+        end
         @value_streams.last.satisfying_value if @value_streams.last
       end
       
