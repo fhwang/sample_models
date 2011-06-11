@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{sample_models}
-  s.version = "1.2.2"
+  s.version = "1.2.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Francis Hwang"]
-  s.date = %q{2011-05-29}
+  s.date = %q{2011-06-11}
   s.description = %q{
 A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:
 
