@@ -576,3 +576,11 @@ describe 'Model which validates the presence and uniqueness of a string field' d
   end
 end
 
+describe 'Model that validates uniqueness with an allow-nil constraint' do
+  it 'should let you configure the default to be nil' do
+    User.sample
+    user = User.create_sample
+    assert_nil user.external_user
+    assert_nil user.external_user_id
+  end
+end

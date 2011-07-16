@@ -175,11 +175,17 @@ module SampleModels
       class ValidatesUniquenessOfValueStream < ValueStream
         def satisfying_value
           value = input.satisfying_value if input
-          if !@model.unique?(@field, value)
-            my_input = input || ValidatesPresenceOfValueStream.new(@model, @field, nil, @input)
-            until @model.unique?(@field, value)
-              my_input.increment
-              value = my_input.satisfying_value
+          unless @config[:allow_nil] && value.nil?
+            unless @config[:allow_blank] && value.blank?
+              if !@model.unique?(@field, value)
+                my_input = input || ValidatesPresenceOfValueStream.new(
+                  @model, @field, nil, @input
+                )
+                until @model.unique?(@field, value)
+                  my_input.increment
+                  value = my_input.satisfying_value
+                end
+              end
             end
           end
           value

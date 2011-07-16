@@ -69,6 +69,9 @@ def initialize_db
         episode.date    'original_air_date'
       end
       
+      create_table 'external_users', :force => true do |external_user|
+      end
+      
       create_table 'networks', :force => true do |network|
         network.string 'name'
       end
@@ -88,7 +91,7 @@ def initialize_db
       end
 
       create_table 'users', :force => true do |user|
-        user.integer 'favorite_blog_post_id'
+        user.integer 'favorite_blog_post_id', 'external_user_id'
         user.string  'email', 'gender', 'homepage', 'login', 'password'
       end
       
@@ -171,6 +174,9 @@ class Episode < ActiveRecord::Base
   validates_presence_of :show_id, :original_air_date
 end
 
+class ExternalUser < ActiveRecord::Base
+end
+
 class Network < ActiveRecord::Base
 end
 
@@ -193,10 +199,12 @@ end
 class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
+  belongs_to :external_user
 
   validates_email_format_of :email
   validates_inclusion_of    :gender, :in => %w(f m)
   validates_uniqueness_of   :email, :login, :case_sensitive => false
+  validates_uniqueness_of   :external_user_id, :allow_nil => true
 end
 
 class User2 < ActiveRecord::Base
@@ -259,6 +267,10 @@ end
 
 SampleModels.configure Subscription do |sub|
   sub.subscribable.default_class BlogPost
+end
+
+SampleModels.configure User do |user|
+  user.external_user_id.default nil
 end
 
 SampleModels.configure Video do |video|
