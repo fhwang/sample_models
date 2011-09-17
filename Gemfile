@@ -3,8 +3,6 @@ source "http://rubygems.org"
 gem 'activerecord', ENV['ACTIVE_RECORD_VERSION']
 gem "activesupport", ENV['ACTIVE_RECORD_VERSION']
 
-# Add dependencies to develop your gem here.
-# Include everything needed to run rake, tests, features, etc.
 group :development do
   gem "bundler", "~> 1.0.0"
   gem "jeweler", "~> 1.6.0"
@@ -12,5 +10,10 @@ end
 
 group :test do
   gem 'sqlite3'
-  gem "validates_email_format_of"
+  version_str = if ENV['ACTIVE_RECORD_VERSION'] =~ /^3\./
+    "~> 1.5.0"
+  else
+    "~> 1.4.0"
+  end
+  gem "validates_email_format_of", version_str
 end

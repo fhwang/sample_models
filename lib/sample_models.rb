@@ -26,6 +26,9 @@ module SampleModels
     if Object.const_defined?('ActiveModel')
       validation_recipients << ActiveModel::Validations::HelperMethods
     end
+    if Object.const_defined?('ValidatesEmailFormatOf')
+      validation_recipients <<  ValidatesEmailFormatOf::Validations
+    end
     validations_to_intercept = [
       :validates_email_format_of, :validates_inclusion_of,
       :validates_presence_of, :validates_uniqueness_of

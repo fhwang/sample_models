@@ -24,4 +24,18 @@ class SampleTest < Test::Unit::TestCase
     user = User.sample
     assert(%(m f).include?(user.gender))
   end
+  
+  def test_cant_override_validations
+    assert_raise(ActiveRecord::RecordInvalid) do
+      User.sample(:gender => 'x')
+    end
+    assert_raise(ActiveRecord::RecordInvalid) do
+      User.sample(:email => 'call.me')
+    end
+  end
+  
+  def test_set_emails
+    user = User.sample
+    assert_match /^.*@.*\..*/, user.email
+  end
 end
