@@ -7,21 +7,15 @@ module SampleModels
     
     def attribute_sequence(column)
       unless @attribute_sequences[column.name]
-        if model.validations(column).empty?
-          @attribute_sequences[column.name] = BaseAttributeSequence.new(
-            model, column
-          )
-        else
-          input = nil
-          model.validations(column).each do |validation|
-            sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
-            if Sampler.const_defined?(sequence_name)
-              sequence_class = Sampler.const_get(sequence_name)
-              input = sequence_class.new(model, column, validation, input)
-            end
+        input = BaseAttributeSequence.new(model, column)
+        model.validations(column).each do |validation|
+          sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
+          if Sampler.const_defined?(sequence_name)
+            sequence_class = Sampler.const_get(sequence_name)
+            input = sequence_class.new(model, column, validation, input)
           end
-          @attribute_sequences[column.name] = input
         end
+        @attribute_sequences[column.name] = input
       end
       @attribute_sequences[column.name]
     end
@@ -41,8 +35,14 @@ module SampleModels
     class AttributeSequence
       def initialize(model, column, validation, input)
         @model, @column, @validation, @input = model, column, validation, input
-        @input ||= BaseAttributeSequence.new(model, column)
         @number = 0
+      end
+      
+      def integer_value
+        assoc = @model.associations.detect { |a|
+          a.belongs_to? && a.foreign_key == @column.name
+        }
+        assoc ? nil : @number
       end
       
       def next
@@ -55,14 +55,7 @@ module SampleModels
           when :string
             "#{@column.name} #{@number}"
           when :integer
-            assoc = @model.associations.detect { |a|
-              a.belongs_to? && a.foreign_key == @column.name
-            }
-            if assoc
-              nil
-            else
-              @number
-            end
+            integer_value
           when :datetime
             Time.utc(1970, 1, 1) + @number.days
           when :float
@@ -73,8 +66,7 @@ module SampleModels
     
     class BaseAttributeSequence < AttributeSequence
       def initialize(model, column)
-        @model, @column = model, column
-        @number = 0
+        super(model, column, nil, nil)
       end
     end
     
