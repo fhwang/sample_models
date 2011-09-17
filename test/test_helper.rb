@@ -37,6 +37,10 @@ silence_stream(STDOUT) do
       calendar.integer 'user_id'
     end
 
+    create_table 'comments', :force => true do |comment|
+      comment.boolean 'flagged_as_spam', :default => false
+    end
+
     create_table 'networks', :force => true do |network|
       network.string 'name'
     end
@@ -88,6 +92,9 @@ class Calendar < ActiveRecord::Base
   belongs_to :user
   
   validates_presence_of :user_id
+end
+
+class Comment < ActiveRecord::Base
 end
 
 class Network < ActiveRecord::Base

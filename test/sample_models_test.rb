@@ -38,4 +38,12 @@ class SampleTest < Test::Unit::TestCase
     user = User.sample
     assert_match /^.*@.*\..*/, user.email
   end
+  
+  def test_doesnt_override_a_db_default
+    assert !Comment.sample.flagged_as_spam
+  end
+  
+  def test_returns_a_new_instance_with_every_sample_call
+    assert(User.sample != User.sample)
+  end
 end
