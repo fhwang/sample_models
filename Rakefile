@@ -3,12 +3,12 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'rubygems'
 
-ActiveRecordVersions = %w(3.0.1 2.3.10 2.3.5)
+ActiveRecordVersions = %w(2.3.14 3.0.10 3.1.0)
 
 desc "Run all tests"
 task :test do
   ActiveRecordVersions.each do |ar_version|
-    cmd = "ACTIVE_RECORD_VERSION=#{ar_version} ruby test/test_sample_models.rb"
+    cmd = "ACTIVE_RECORD_VERSION=#{ar_version} ruby test/sample_models_test.rb"
     puts cmd
     puts `cd . && #{cmd}`
     puts
