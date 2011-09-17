@@ -1,14 +1,18 @@
+require 'delegate'
+
 module SampleModels
-  class Model
-    attr_reader :validations_by_attr
+  class Model < Delegator
+    def initialize(ar_class)
+      @ar_class = ar_class
+      @validations = Hash.new { |h,k| h[k] = [] }
+    end
     
-    def initialize(model_class)
-      @model_class = model_class
-      @validations_by_attr = Hash.new { |h,k| h[k] = [] }
+    def __getobj__
+      @ar_class
     end
     
     def associations
-      @model_class.reflect_on_all_associations.map { |a| Association.new(a) }
+      @ar_class.reflect_on_all_associations.map { |a| Association.new(a) }
     end
     
     def record_validation(*args)
@@ -16,11 +20,17 @@ module SampleModels
       config = args.extract_options!
       fields = args
       fields.each do |field|
-        @validations_by_attr[field] << [type, config]
+        @validations[field.to_s] << Validation.new(type, config)
       end
     end
     
-    require 'delegate'
+    def unique?(field, value)
+      @ar_class.count(:conditions => {field => value}) == 0
+    end
+    
+    def validations(column)
+      @validations[column.name]
+    end
     
     class Association < Delegator
       def initialize(assoc)
@@ -41,6 +51,26 @@ module SampleModels
         else
           @assoc.primary_key_name
         end
+      end
+    end
+    
+    class Validation
+      attr_reader :config, :type
+      
+      def initialize(type, config)
+        @type, @config = type, config
+      end
+      
+      def email_format?
+        @type == :validates_email_format_of
+      end
+      
+      def inclusion?
+        @type == :validates_inclusion_of
+      end
+      
+      def presence?
+        @type == :validates_presence_of?
       end
     end
   end

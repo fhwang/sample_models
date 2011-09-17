@@ -11,4 +11,17 @@ class SampleTest < Test::Unit::TestCase
     network = Network.sample
     assert network.name.is_a?(String)
   end
+  
+  def test_allows_overrides_of_all_fields
+    user = User.sample(
+      :homepage => 'http://mysite.com/', :password => 'myownpassword'
+    )
+    assert_equal 'http://mysite.com/', user.homepage
+    assert_equal 'myownpassword', user.password
+  end
+  
+  def test_picks_a_value_given_in_a_validates_inclusion_of
+    user = User.sample
+    assert(%(m f).include?(user.gender))
+  end
 end
