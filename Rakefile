@@ -3,19 +3,24 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'rubygems'
 
+Rake::TestTask.new do |t|
+  t.test_files = FileList['test/unit/*_test.rb']
+  t.verbose = true
+end
+
 ActiveRecordVersions = %w(2.3.14 3.0.10 3.1.0)
 
-desc "Run all tests"
-task :test do
+desc "Run all tests, for all tested versions of ActiveRecord"
+task :all_tests do
   ActiveRecordVersions.each do |ar_version|
-    cmd = "ACTIVE_RECORD_VERSION=#{ar_version} ruby test/sample_models_test.rb"
+    cmd = "ACTIVE_RECORD_VERSION=#{ar_version} rake test"
     puts cmd
     puts `cd . && #{cmd}`
     puts
   end
 end
 
-task :default => :test
+task :default => :all_tests
 
 desc 'Generate documentation for the sample_models plugin.'
 Rake::RDocTask.new(:rdoc) do |rdoc|

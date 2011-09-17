@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/test_helper"
+require File.dirname(__FILE__) + "/../test_helper"
 
 class SampleTest < Test::Unit::TestCase
   def test_fills_non_validated_non_configured_fields_with_a_non_blank_value
