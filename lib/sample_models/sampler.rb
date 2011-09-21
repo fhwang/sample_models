@@ -26,7 +26,33 @@ module SampleModels
     end
     
     def sample(*args)
-      Creation.new(self, args).run
+      attrs = HashWithIndifferentAccess.new(
+        args.last.is_a?(Hash) ? args.pop : {}
+      )
+      args.each do |associated_value|
+        assocs = model.associations.select { |a|
+          begin
+            a.klass == associated_value.class
+          rescue NameError
+            false
+          end
+        }
+        if assocs.size == 1
+          attrs[assocs.first.name] = associated_value
+        else
+          raise "Not sure what to do with associated value #{associated_value.inspect}"
+        end
+      end
+      model.belongs_to_associations.each do |assoc|
+        if value = attrs[assoc.name]
+          if value.is_a?(Hash)
+            attrs[assoc.name] = assoc.klass.sample(value)
+          elsif value.is_a?(Array)
+            attrs[assoc.name] = assoc.klass.sample(*value)
+          end
+        end
+      end
+      Creation.new(self, attrs).run
     end
     
     def second_pass_attribute_sequence(column)
@@ -45,9 +71,8 @@ module SampleModels
     end
     
     class Creation
-      def initialize(sampler, args)
-        @sampler = sampler
-        @specified_attrs = HashWithIndifferentAccess.new(args.first || {})
+      def initialize(sampler, specified_attrs)
+        @sampler, @specified_attrs = sampler, specified_attrs
       end
       
       def model

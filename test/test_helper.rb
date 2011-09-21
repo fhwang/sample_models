@@ -46,6 +46,12 @@ silence_stream(STDOUT) do
       comment.boolean 'flagged_as_spam', :default => false
     end
 
+    create_table 'episodes', :force => true do |episode|
+      episode.integer 'show_id'
+      episode.string  'name'
+      episode.date    'original_air_date'
+    end
+
     create_table 'external_users', :force => true do |external_user|
     end
 
@@ -61,6 +67,10 @@ silence_stream(STDOUT) do
     create_table 'users', :force => true do |user|
       user.integer 'favorite_blog_post_id', 'external_user_id'
       user.string  'email', 'gender', 'homepage', 'login', 'password'
+    end
+
+    create_table 'videos', :force => true do |video|
+      video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
     end
   end
 end
@@ -109,6 +119,12 @@ end
 class Comment < ActiveRecord::Base
 end
 
+class Episode < ActiveRecord::Base
+  belongs_to :show
+  
+  validates_presence_of :show_id, :original_air_date
+end
+
 class ExternalUser < ActiveRecord::Base
 end
 
@@ -128,6 +144,20 @@ class User < ActiveRecord::Base
   validates_inclusion_of    :gender, :in => %w(f m)
   validates_uniqueness_of   :email, :login, :case_sensitive => false
   validates_uniqueness_of   :external_user_id, :allow_nil => true
+end
+
+class Video < ActiveRecord::Base
+  belongs_to :show
+  belongs_to :network
+  belongs_to :episode
+  
+  validate :validate_episode_has_same_show_id
+  
+  def validate_episode_has_same_show_id
+    if episode && episode.show_id != show_id
+      errors.add "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
+    end
+  end
 end
 
 require 'test/unit'

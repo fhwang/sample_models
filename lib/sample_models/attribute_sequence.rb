@@ -21,6 +21,8 @@ module SampleModels
           assoc ? belongs_to_assoc_foreign_key_value : @number
         when :datetime
           Time.utc(1970, 1, 1) + @number.days
+        when :date
+          Date.today + @number
         when :float
           @number.to_f
         end
