@@ -26,14 +26,7 @@ module SampleModels
     end
     
     def sample(*args)
-      specified_attrs = HashWithIndifferentAccess.new(args.first || {})
-      attrs = specified_attrs.clone
-      model.columns.each do |column|
-        attrs[column.name] ||= first_pass_attribute_sequence(column).next
-      end
-      instance = model.create!(attrs)
-      instance = update_with_deferred_associations(instance, specified_attrs)
-      instance
+      Creation.new(self, args).run
     end
     
     def second_pass_attribute_sequence(column)
@@ -51,23 +44,44 @@ module SampleModels
       @second_pass_attribute_sequences[column.name]
     end
     
-    def update_with_deferred_associations(instance, specified_attrs)
-      deferred_assocs = model.associations.select { |a|
-        a.belongs_to? && instance.send(a.foreign_key).nil? &&
-          !specified_attrs.member?(a.foreign_key) &&
-          !specified_attrs.member?(a.name)
-      }
-      unless deferred_assocs.empty?
-        deferred_assocs.each do |a|
-          column = model.columns.detect { |c| c.name == a.foreign_key }
-          instance.send(
-            "#{a.foreign_key}=", 
-            second_pass_attribute_sequence(column).next
-          )
-        end
-        instance.save!
+    class Creation
+      def initialize(sampler, args)
+        @sampler = sampler
+        @specified_attrs = HashWithIndifferentAccess.new(args.first || {})
       end
-      instance
+      
+      def model
+        @sampler.model
+      end
+      
+      def run
+        attrs = @specified_attrs.clone
+        model.columns.each do |column|
+          sequence = @sampler.first_pass_attribute_sequence(column)
+          attrs[column.name] ||= sequence.next
+        end
+        @instance = model.create!(attrs)
+        update_with_deferred_associations
+        @instance
+      end
+    
+      def update_with_deferred_associations
+        deferred_assocs = model.belongs_to_associations.select { |a|
+          @instance.send(a.foreign_key).nil? &&
+            !@specified_attrs.member?(a.foreign_key) &&
+            !@specified_attrs.member?(a.name)
+        }
+        unless deferred_assocs.empty?
+          deferred_assocs.each do |a|
+            column = model.columns.detect { |c| c.name == a.foreign_key }
+            @instance.send(
+              "#{a.foreign_key}=", 
+              @sampler.second_pass_attribute_sequence(column).next
+            )
+          end
+          @instance.save!
+        end
+      end
     end
   end
 end

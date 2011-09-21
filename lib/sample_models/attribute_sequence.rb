@@ -15,7 +15,10 @@ module SampleModels
         when :string
           "#{@column.name} #{@number}"
         when :integer
-          integer_value
+          assoc = @model.belongs_to_associations.detect { |a|
+            a.foreign_key == @column.name
+          }
+          assoc ? belongs_to_assoc_foreign_key_value : @number
         when :datetime
           Time.utc(1970, 1, 1) + @number.days
         when :float
@@ -29,11 +32,8 @@ module SampleModels
       super(model, column, nil, nil)
     end
     
-    def integer_value
-      assoc = @model.associations.detect { |a|
-        a.belongs_to? && a.foreign_key == @column.name
-      }
-      assoc ? nil : @number
+    def belongs_to_assoc_foreign_key_value
+      nil
     end
   end
   
@@ -43,26 +43,22 @@ module SampleModels
       @previous_values = {}
     end
     
-    def integer_value
-      assoc = @model.associations.detect { |a|
-        a.belongs_to? && a.foreign_key == @column.name
+    def belongs_to_assoc_foreign_key_value
+      assoc = @model.belongs_to_associations.detect { |a|
+        a.foreign_key == @column.name
       }
-      if assoc
-        record = (assoc.klass.last || assoc.klass.sample)
+      record = (assoc.klass.last || assoc.klass.sample)
+      already_used = @previous_values.any? { |prev_num, prev_record|
+        prev_record == record && prev_num != @number
+      }
+      while already_used
+        record = assoc.klass.sample
         already_used = @previous_values.any? { |prev_num, prev_record|
           prev_record == record && prev_num != @number
         }
-        while already_used
-          record = assoc.klass.sample
-          already_used = @previous_values.any? { |prev_num, prev_record|
-            prev_record == record && prev_num != @number
-          }
-        end
-        @previous_values[@number] = record
-        record.id
-      else
-        @number
       end
+      @previous_values[@number] = record
+      record.id
     end
   end
   
@@ -80,8 +76,8 @@ module SampleModels
   
   class ValidatesPresenceOfAttributeSequence < AttributeSequence
     def value
-      if assoc = @model.associations.detect { |a|
-        a.belongs_to? && a.foreign_key == @column.name
+      if assoc = @model.belongs_to_associations.detect { |a|
+        a.foreign_key == @column.name
       }
         (assoc.klass.last || assoc.klass.sample).id
       else

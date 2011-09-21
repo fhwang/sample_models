@@ -15,6 +15,10 @@ module SampleModels
       @ar_class.reflect_on_all_associations.map { |a| Association.new(a) }
     end
     
+    def belongs_to_associations
+      associations.select { |a| a.belongs_to? }
+    end
+    
     def record_validation(*args)
       type = args.shift
       config = args.extract_options!
