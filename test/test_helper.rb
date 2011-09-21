@@ -37,8 +37,16 @@ silence_stream(STDOUT) do
       calendar.integer 'user_id'
     end
 
+    create_table 'categories', :force => true do |category|
+      category.string  'name'
+      category.integer 'parent_id'
+    end
+
     create_table 'comments', :force => true do |comment|
       comment.boolean 'flagged_as_spam', :default => false
+    end
+
+    create_table 'external_users', :force => true do |external_user|
     end
 
     create_table 'networks', :force => true do |network|
@@ -94,7 +102,14 @@ class Calendar < ActiveRecord::Base
   validates_presence_of :user_id
 end
 
+class Category < ActiveRecord::Base
+  belongs_to :parent, :class_name => 'Category'
+end
+
 class Comment < ActiveRecord::Base
+end
+
+class ExternalUser < ActiveRecord::Base
 end
 
 class Network < ActiveRecord::Base
