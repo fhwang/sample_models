@@ -22,15 +22,6 @@ end
 
 task :default => :all_tests
 
-desc 'Generate documentation for the sample_models plugin.'
-Rake::RDocTask.new(:rdoc) do |rdoc|
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'SampleModels'
-  rdoc.options << '--line-numbers' << '--inline-source'
-  rdoc.rdoc_files.include('README')
-  rdoc.rdoc_files.include('lib/**/*.rb')
-end
-
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   gem.name = "sample_models"
