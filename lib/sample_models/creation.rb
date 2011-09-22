@@ -13,9 +13,12 @@ module SampleModels
     
     def run
       attrs = @specified_attrs.clone
+      @sampler.defaults.each do |attr, val|
+        attrs[attr] = val unless attrs.member?(attr)
+      end
       model.columns.each do |column|
         sequence = @sampler.first_pass_attribute_sequence(column)
-        attrs[column.name] ||= sequence.next
+        attrs[column.name] = sequence.next unless attrs.member?(column.name)
       end
       @instance = model.create!(attrs)
       update_with_deferred_associations
@@ -26,7 +29,8 @@ module SampleModels
       deferred_assocs = model.belongs_to_associations.select { |a|
         @instance.send(a.foreign_key).nil? &&
           !@specified_attrs.member?(a.foreign_key) &&
-          !@specified_attrs.member?(a.name)
+          !@specified_attrs.member?(a.name) &&
+          !@sampler.defaults.member?(a.name)
       }
       unless deferred_assocs.empty?
         deferred_assocs.each do |a|

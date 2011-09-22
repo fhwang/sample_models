@@ -79,3 +79,21 @@ class Video < ActiveRecord::Base
     end
   end
 end
+
+SampleModels.configure Category do |category|
+  category.parent.default nil
+end
+
+SampleModels.configure(Video) do |video|
+  video.before_save do |v, sample_attrs|
+    if v.episode && v.episode.show != v.show
+      if sample_attrs[:show]
+        v.episode.show = v.show
+      else
+        v.show = v.episode.show
+      end
+    end
+  end
+  video.view_count.default 0
+end
+

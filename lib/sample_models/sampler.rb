@@ -1,9 +1,17 @@
 module SampleModels
   class Sampler
+    attr_reader :defaults
+    
     def initialize(model_class)
       @model_class = model_class
       @first_pass_attribute_sequences = {}
       @second_pass_attribute_sequences = {}
+      @defaults = HashWithIndifferentAccess.new
+    end
+    
+    def configure(block)
+      recipient = ConfigureRecipient.new(self)
+      block.call(recipient)
     end
     
     def first_pass_attribute_sequence(column)
@@ -42,6 +50,37 @@ module SampleModels
         @second_pass_attribute_sequences[column.name] = input
       end
       @second_pass_attribute_sequences[column.name]
+    end
+    
+    class ConfigureRecipient
+      def initialize(sampler)
+        @sampler = sampler
+      end
+      
+      def method_missing(meth, *args, &block)
+        if @sampler.model.column_names.include?(meth.to_s)
+          Attribute.new(@sampler, meth)
+        elsif @sampler.model.belongs_to_associations.any? { |a|
+            a.name == meth
+        }
+          Attribute.new(@sampler, meth)
+        else
+          super
+        end
+      end
+
+      def before_save
+      end
+      
+      class Attribute
+        def initialize(sampler, attribute)
+          @sampler, @attribute = sampler, attribute
+        end
+        
+        def default(default)
+          @sampler.defaults[@attribute] = default
+        end
+      end
     end
   end
 end

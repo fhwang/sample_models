@@ -9,6 +9,10 @@ module SampleModels
     h[model_class] = Sampler.new(model_class)
   }
   
+  def self.configure(model_class, &block)
+    samplers[model_class].configure(block)
+  end
+  
   def self.init
     Initializer.new.run
   end
