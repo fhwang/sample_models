@@ -7,6 +7,17 @@ module SampleModels
       @specified_attrs = PreprocessedArgs.new(model, *args).result
     end
     
+    def deferred_belongs_to_assocs
+      @deferred_belongs_to_assocs ||= begin
+        model.belongs_to_associations.select { |a|
+          @instance.send(a.foreign_key).nil? &&
+            !@specified_attrs.member?(a.foreign_key) &&
+            !@specified_attrs.member?(a.name) && 
+            !@sampler.defaults.member?(a.name)
+        }
+      end
+    end
+    
     def model
       @sampler.model
     end
@@ -26,14 +37,8 @@ module SampleModels
     end
   
     def update_with_deferred_associations
-      deferred_assocs = model.belongs_to_associations.select { |a|
-        @instance.send(a.foreign_key).nil? &&
-          !@specified_attrs.member?(a.foreign_key) &&
-          !@specified_attrs.member?(a.name) &&
-          !@sampler.defaults.member?(a.name)
-      }
-      unless deferred_assocs.empty?
-        deferred_assocs.each do |a|
+      unless deferred_belongs_to_assocs.empty?
+        deferred_belongs_to_assocs.each do |a|
           column = model.columns.detect { |c| c.name == a.foreign_key }
           @instance.send(
             "#{a.foreign_key}=", 
