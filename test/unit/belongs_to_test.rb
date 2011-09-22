@@ -1,16 +1,25 @@
 require File.dirname(__FILE__) + "/../test_helper"
 
-class BelongsToTest < Test::Unit::TestCase
+class BelongsToTest < SampleModelsTestCase
   def test_associated_with_belongs_to_recipient_by_default
-    blog_post = BlogPost.sample
-    assert blog_post.user
-    assert blog_post.user.is_a?(User)
+    assert_difference('BlogPost.count') do
+      blog_post = BlogPost.sample
+      assert blog_post.user
+      assert blog_post.user.is_a?(User)
+    end
   end
   
   def test_sets_a_custom_value_by_association_name
-    user = User.sample
-    blog_post = BlogPost.sample :user => user
-    assert_equal user, blog_post.user
+    user = nil
+    assert_difference('User.count') do
+      user = User.sample
+    end
+    assert_difference('BlogPost.count') do
+      assert_no_difference('User.count') do
+        blog_post = BlogPost.sample :user => user
+        assert_equal user, blog_post.user
+      end
+    end
   end
   
   def test_sets_a_custom_value_by_column_name
