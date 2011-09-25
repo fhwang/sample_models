@@ -15,6 +15,10 @@ module SampleModels
       @ar_class.reflect_on_all_associations.map { |a| Association.new(a) }
     end
     
+    def belongs_to_association(name)
+      belongs_to_associations.detect { |a| a.name.to_s == name.to_s }
+    end
+    
     def belongs_to_associations
       associations.select { |a| a.belongs_to? }
     end
