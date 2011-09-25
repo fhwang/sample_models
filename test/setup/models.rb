@@ -68,7 +68,7 @@ end
 
 class Video < ActiveRecord::Base
   belongs_to :show
-  belongs_to :network
+  belongs_to :network                
   belongs_to :episode
   
   validate :validate_episode_has_same_show_id
@@ -78,6 +78,12 @@ class Video < ActiveRecord::Base
       errors.add "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
     end
   end
+end
+                 
+SampleModels.configure BlogPost do |bp|
+  bp.published_at.force_unique
+  
+  bp.funny_sample :title => 'Funny haha', :average_rating => 3.0
 end
 
 SampleModels.configure Category do |category|

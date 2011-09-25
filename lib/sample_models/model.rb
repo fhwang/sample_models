@@ -61,7 +61,7 @@ module SampleModels
     class Validation
       attr_reader :config, :type
       
-      def initialize(type, config)
+      def initialize(type, config = {})
         @type, @config = type, config
       end
       

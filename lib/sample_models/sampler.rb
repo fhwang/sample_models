@@ -7,6 +7,7 @@ module SampleModels
       @first_pass_attribute_sequences = {}
       @second_pass_attribute_sequences = {}
       @defaults = HashWithIndifferentAccess.new
+      @forced_unique = []
     end
     
     def configure(block)
@@ -24,11 +25,21 @@ module SampleModels
             input = sequence_class.new(model, column, validation, input)
           end
         end
+        if @forced_unique.include?(column.name)
+          input = ValidatesUniquenessOfAttributeSequence.new(
+            model, column, Model::Validation.new(:validates_uniqueness_of), 
+            input
+          )
+        end
         @first_pass_attribute_sequences[column.name] = input
       end
       @first_pass_attribute_sequences[column.name]
     end
     
+    def force_unique(attr)
+      @forced_unique << attr.to_s
+    end
+
     def model
       SampleModels.models[@model_class]
     end
@@ -47,6 +58,11 @@ module SampleModels
             input = sequence_class.new(model, column, validation, input)
           end
         end
+        if @forced_unique.include?(column.name)
+          input = ValidatesUniquenessOfAttributeSequence.new(
+            model, column, Model::Validation.new(:validates_uniqueness_of), input
+          )
+        end
         @second_pass_attribute_sequences[column.name] = input
       end
       @second_pass_attribute_sequences[column.name]
@@ -64,6 +80,7 @@ module SampleModels
             a.name == meth
         }
           Attribute.new(@sampler, meth)
+        elsif meth.to_s =~ /(.*)_sample$/
         else
           super
         end
@@ -79,6 +96,10 @@ module SampleModels
         
         def default(default)
           @sampler.defaults[@attribute] = default
+        end
+        
+        def force_unique
+          @sampler.force_unique(@attribute)
         end
       end
     end
