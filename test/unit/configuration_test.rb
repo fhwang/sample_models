@@ -41,4 +41,28 @@ class ConfigurationTest < SampleModelsTestCase
     bp = BlogPost.sample :published_at => nil
     assert_nil bp.published_at
   end
+
+  def test_before_save
+    assert_difference('Video.count') do
+      assert_difference('Episode.count') do
+        video1 = Video.sample :episode => {:name => 'The one about the parents'}
+        assert video1.show
+        assert video1.episode
+        assert_equal video1.show, video1.episode.show
+      end
+    end
+    assert_difference('Video.count') do
+      assert_difference('Show.count') do
+        video2 = Video.sample :show => {:name => 'South Park'}
+        assert_equal video2.show, video2.episode.show
+        assert_equal 'South Park', video2.show.name
+      end
+    end
+  end
+  
+  def test_before_save_with_only_the_first_argument
+    assert_difference('Appointment.count') do
+      Appointment.sample
+    end
+  end
 end

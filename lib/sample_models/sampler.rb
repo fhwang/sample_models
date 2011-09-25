@@ -1,6 +1,7 @@
 module SampleModels
   class Sampler
-    attr_reader :defaults
+    attr_accessor :before_save
+    attr_reader   :defaults
     
     def initialize(model_class)
       @model_class = model_class
@@ -86,7 +87,8 @@ module SampleModels
         end
       end
 
-      def before_save
+      def before_save(&proc)
+        @sampler.before_save = proc
       end
       
       class Attribute

@@ -29,14 +29,34 @@ module SampleModels
       end
       model.columns.each do |column|
         sequence = @sampler.first_pass_attribute_sequence(column)
-        attrs[column.name] = sequence.next unless attrs.member?(column.name)
+        unless attrs.member?(column.name)
+          unless attrs.any? { |attr, val|
+            model.belongs_to_associations.detect { |a|
+              a.name.to_s == attr && a.foreign_key == column.name
+            }
+          }
+            attrs[column.name] = sequence.next
+          end
+        end
       end
-      @instance = model.create!(attrs)
-      update_with_deferred_associations
+      @instance = model.new(attrs)
+      save!
+      update_with_deferred_associations!
       @instance
     end
+    
+    def save!
+      if @sampler.before_save
+        if @sampler.before_save.arity == 1
+          @sampler.before_save.call(@instance)
+        else
+          @sampler.before_save.call(@instance, @specified_attrs)
+        end
+      end
+      @instance.save!
+    end
   
-    def update_with_deferred_associations
+    def update_with_deferred_associations!
       unless deferred_belongs_to_assocs.empty?
         deferred_belongs_to_assocs.each do |a|
           column = model.columns.detect { |c| c.name == a.foreign_key }
@@ -45,7 +65,7 @@ module SampleModels
             @sampler.second_pass_attribute_sequence(column).next
           )
         end
-        @instance.save!
+        save!
       end
     end
     

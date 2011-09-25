@@ -75,11 +75,22 @@ class Video < ActiveRecord::Base
   
   def validate_episode_has_same_show_id
     if episode && episode.show_id != show_id
-      errors.add "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
+      msg = "Video needs same show as the episode; show_id is #{show_id.inspect} while episode.show_id is #{episode.show_id.inspect}"
+      if errors.respond_to?(:add_to_base)
+        errors.add_to_base(msg)
+      else
+        errors[:base] << msg
+      end
     end
   end
 end
-                 
+          
+SampleModels.configure Appointment do |appointment|
+  appointment.before_save do |a|
+    a.user_id = a.calendar.user_id
+  end
+end
+
 SampleModels.configure BlogPost do |bp|
   bp.published_at.force_unique
   
