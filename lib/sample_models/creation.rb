@@ -4,7 +4,7 @@ module SampleModels
   class Creation
     def initialize(sampler, *args)
       @sampler = sampler
-      @specified_attrs = SpecifiedAttributes.new(model, *args).result
+      @specified_attrs = SpecifiedAttributes.new(sampler, *args).result
     end
     
     def deferred_belongs_to_assocs
@@ -83,24 +83,29 @@ module SampleModels
     class SpecifiedAttributes
       attr_reader :result
       
-      def initialize(model, *args)
-        @model = model
-        @result = HashWithIndifferentAccess.new(
-          args.last.is_a?(Hash) ? args.pop : {}
-        )
+      def initialize(sampler, *args)
+        @sampler = sampler
+        @result = if args.first.is_a?(Symbol)
+          sample_name = args.shift
+          @sampler.named_samples[sample_name].clone
+        else
+          {}
+        end
+        @result.merge!(args.pop) if args.last.is_a?(Hash)
         args.each do |associated_value|
           assign_associated_record_from_args(associated_value)
         end
-        @model.belongs_to_associations.each do |assoc|
+        model.belongs_to_associations.each do |assoc|
           build_belongs_to_record_from_shortcut_args(assoc)
         end
-        @model.has_many_associations.each do |assoc|
+        model.has_many_associations.each do |assoc|
           build_has_many_record_from_shortcut_args(assoc)
         end
+        @result = HashWithIndifferentAccess.new(@result)
       end
       
       def assign_associated_record_from_args(associated_value)
-        assocs = @model.associations.select { |a|
+        assocs = model.associations.select { |a|
           begin
             a.klass == associated_value.class
           rescue NameError
@@ -130,6 +135,10 @@ module SampleModels
             value.is_a?(Hash) ? assoc.klass.sample(value) : value
           }
         end
+      end
+      
+      def model
+        @sampler.model
       end
     end
   end

@@ -1,6 +1,6 @@
 module SampleModels
   class Sampler
-    attr_accessor :before_save, :polymorphic_default_classes
+    attr_accessor :before_save, :named_samples, :polymorphic_default_classes
     attr_reader   :defaults
     
     def initialize(model_class)
@@ -9,6 +9,7 @@ module SampleModels
       @second_pass_attribute_sequences = {}
       @defaults = HashWithIndifferentAccess.new
       @forced_unique = []
+      @named_samples = HashWithIndifferentAccess.new
       @polymorphic_default_classes = HashWithIndifferentAccess.new
     end
     
@@ -56,6 +57,7 @@ module SampleModels
         elsif @sampler.model.belongs_to_association(meth)
           Attribute.new(@sampler, meth)
         elsif meth.to_s =~ /(.*)_sample$/
+          @sampler.named_samples[$1] = args.first
         else
           super
         end
