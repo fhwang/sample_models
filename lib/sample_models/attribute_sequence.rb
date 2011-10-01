@@ -5,6 +5,12 @@ module SampleModels
       @number = 0
     end
     
+    def belongs_to_association
+      @model.belongs_to_associations.detect { |a|
+        a.foreign_key == @column.name
+      }
+    end
+    
     def next
       @number += 1
       @input.next if @input
@@ -16,10 +22,7 @@ module SampleModels
         when :string
           "#{@column.name} #{@number}"
         when :integer
-          assoc = @model.belongs_to_associations.detect { |a|
-            a.foreign_key == @column.name
-          }
-          assoc ? belongs_to_assoc_foreign_key_value : @number
+          belongs_to_association ? belongs_to_assoc_foreign_key_value : @number
         when :datetime
           Time.utc(1970, 1, 1) + @number.days
         when :date
@@ -47,9 +50,7 @@ module SampleModels
     end
     
     def belongs_to_assoc_foreign_key_value
-      assoc = @model.belongs_to_associations.detect { |a|
-        a.foreign_key == @column.name
-      }
+      assoc = belongs_to_association
       record = (assoc.klass.last || assoc.klass.sample)
       already_used = @previous_values.any? { |prev_num, prev_record|
         prev_record == record && prev_num != @number
@@ -78,34 +79,32 @@ module SampleModels
   end
   
   class ValidatesPresenceOfAttributeSequence < AttributeSequence
-    def initialize(model, column, validation, input)
-      super
-      @numbers_to_belongs_to_instances = {}
+    def belongs_to_value
+      @previous_belongs_to_values ||= {}
+      if @previous_belongs_to_values[@number]
+        @previous_belongs_to_values[@number].id
+      else
+        instance = existing_instance_not_previously_returned
+        instance ||= belongs_to_association.klass.sample
+        @previous_belongs_to_values[@number] = instance
+        instance.id
+      end
+    end
+    
+    def existing_instance_not_previously_returned
+      previous_ids = @previous_belongs_to_values.values.map(&:id)
+      instance = nil
+      if previous_ids.empty?
+        belongs_to_association.klass.last
+      else
+        belongs_to_association.klass.last(
+          :conditions => ["id not in (?)", previous_ids]
+        )
+      end
     end
     
     def value
-      if assoc = @model.belongs_to_associations.detect { |a|
-        a.foreign_key == @column.name
-      }
-        if @numbers_to_belongs_to_instances[@number]
-          @numbers_to_belongs_to_instances[@number].id
-        else
-          previous_ids = @numbers_to_belongs_to_instances.values.map(&:id)
-          instance = nil
-          if previous_ids.empty?
-            instance = assoc.klass.last
-          else
-            instance = assoc.klass.last(
-              :conditions => ["id not in (?)", previous_ids]
-            )
-          end
-          instance ||= assoc.klass.sample
-          @numbers_to_belongs_to_instances[@number] = instance
-          instance.id
-        end
-      else
-        super
-      end
+      belongs_to_association ? belongs_to_value : super
     end
   end
   
