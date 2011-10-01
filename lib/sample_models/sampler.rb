@@ -11,50 +11,17 @@ module SampleModels
       @forced_unique = []
     end
     
-    def attribute_sequence(pass, column)
-      input = base_attribute_sequence(pass, column)
-      uniqueness_validation = nil
-      if @forced_unique.include?(column.name)
-        uniqueness_validation = Model::Validation.new(:validates_uniqueness_of)
-      end
-      model.validations(column).each do |validation|
-        if validation.type == :validates_uniqueness_of
-          uniqueness_validation = validation
-        else
-          sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
-          if SampleModels.const_defined?(sequence_name)
-            sequence_class = SampleModels.const_get(sequence_name)
-            input = sequence_class.new(model, column, validation, input)
-          end
-        end
-      end
-      if uniqueness_validation
-        input = ValidatesUniquenessOfAttributeSequence.new(
-          model, column, uniqueness_validation, input
-        )
-      end
-      input
-    end
-    
-    def base_attribute_sequence(pass, column)
-      base_class = SampleModels.const_get(
-        "#{pass.to_s.capitalize}PassBaseAttributeSequence"
-      )
-      base_class.new(model, column)
-    end
-    
     def configure(block)
       recipient = ConfigureRecipient.new(self)
       block.call(recipient)
     end
     
     def first_pass_attribute_sequence(column)
-      unless @first_pass_attribute_sequences[column.name]
-        @first_pass_attribute_sequences[column.name] = attribute_sequence(
-          :first, column
+      @first_pass_attribute_sequences[column.name] ||= begin
+        AttributeSequence.build(
+          :first, model, column, @forced_unique.include?(column.name)
         )
       end
-      @first_pass_attribute_sequences[column.name]
     end
     
     def force_unique(attr)
@@ -70,12 +37,11 @@ module SampleModels
     end
     
     def second_pass_attribute_sequence(column)
-      unless @second_pass_attribute_sequences[column.name]
-        @second_pass_attribute_sequences[column.name] = attribute_sequence(
-          :second, column
+      @second_pass_attribute_sequences[column.name] ||= begin
+        AttributeSequence.build(
+          :second, model, column, @forced_unique.include?(column.name)
         )
       end
-      @second_pass_attribute_sequences[column.name]
     end
     
     class ConfigureRecipient

@@ -1,5 +1,39 @@
 module SampleModels
   class AttributeSequence
+    def self.base(pass, model, column)
+      base_class = SampleModels.const_get(
+        "#{pass.to_s.capitalize}PassBaseAttributeSequence"
+      )
+      base_class.new(model, column)
+    end
+
+    def self.build(pass, model, column, force_unique)
+      input = base(pass, model, column)
+      uniqueness_validation = if force_unique
+        Model::Validation.new(:validates_uniqueness_of)
+      end
+      model.validations(column).each do |validation|
+        if validation.type == :validates_uniqueness_of
+          uniqueness_validation = validation
+        elsif s_class = sequence_class(validation)
+          input = s_class.new(model, column, validation, input)
+        end
+      end
+      if uniqueness_validation
+        input = ValidatesUniquenessOfAttributeSequence.new(
+          model, column, uniqueness_validation, input
+        )
+      end
+      input
+    end
+    
+    def self.sequence_class(validation)
+      sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
+      if SampleModels.const_defined?(sequence_name)
+        SampleModels.const_get(sequence_name)
+      end
+    end
+    
     def initialize(model, column, validation, input)
       @model, @column, @validation, @input = model, column, validation, input
       @number = 0
