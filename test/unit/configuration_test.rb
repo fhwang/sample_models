@@ -73,4 +73,11 @@ class ConfigurationTest < SampleModelsTestCase
       end
     end
   end
+  
+  def test_validate_uniqueness_with_an_allow_nil_allows_nil_configuration
+    User.sample
+    user = User.sample
+    assert_nil user.external_user
+    assert_nil user.external_user_id
+  end
 end

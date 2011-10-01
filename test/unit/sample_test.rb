@@ -105,4 +105,10 @@ class SampleTest < SampleModelsTestCase
     user_with_password = UserWithPassword.sample
     assert user_with_password.password.present?
   end
+  
+  def test_string_which_is_required_to_be_present_and_unique
+    # Ensuring that it doesn't get tripped up by a pre-existing record
+    User2.create!(:login => 'login 1')
+    User2.sample
+  end
 end

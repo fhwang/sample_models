@@ -87,6 +87,11 @@ class User < ActiveRecord::Base
   validates_uniqueness_of   :external_user_id, :allow_nil => true
 end
 
+class User2 < ActiveRecord::Base
+  validates_presence_of   :login
+  validates_uniqueness_of :login
+end
+
 class UserWithPassword < ActiveRecord::Base
   attr_accessor :password
   
@@ -145,6 +150,10 @@ end
 
 SampleModels.configure(Subscription) do |sub|
   sub.subscribable.default_class BlogPost
+end
+
+SampleModels.configure(User) do |user|
+  user.external_user_id.default nil
 end
 
 SampleModels.configure(Video) do |video|

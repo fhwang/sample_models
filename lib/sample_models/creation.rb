@@ -13,6 +13,7 @@ module SampleModels
           @instance.send(a.foreign_key).nil? &&
             !@specified_attrs.member?(a.foreign_key) &&
             !@specified_attrs.member?(a.name) && 
+            !@sampler.defaults.member?(a.foreign_key) &&
             !@sampler.defaults.member?(a.name)
         }
       end

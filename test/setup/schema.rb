@@ -78,6 +78,10 @@ silence_stream(STDOUT) do
       user.string  'email', 'gender', 'homepage', 'login', 'password'
     end
 
+    create_table 'user2s', :force => true do |user2|
+      user2.string  'login'
+    end
+    
     create_table 'user_with_passwords', :force => true do |user|
     end
     
