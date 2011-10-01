@@ -2,6 +2,8 @@ require 'delegate'
 
 module SampleModels
   class Model < Delegator
+    attr_reader :ar_class
+    
     def initialize(ar_class)
       @ar_class = ar_class
       @validations = Hash.new { |h,k| h[k] = [] }

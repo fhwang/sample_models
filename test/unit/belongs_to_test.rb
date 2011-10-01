@@ -121,4 +121,9 @@ class BelongsToTest < SampleModelsTestCase
     # 2nd VideoFavorite to the new Video.
     assert_not_equal video_fav1.video, video_fav2.video
   end
+  
+  def test_belongs_to_assoc_of_same_class
+    blog_post = BlogPost.sample
+    assert_nil blog_post.merged_into
+  end
 end
