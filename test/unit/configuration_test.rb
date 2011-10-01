@@ -65,4 +65,12 @@ class ConfigurationTest < SampleModelsTestCase
       Appointment.sample
     end
   end
+  
+  def test_error_on_bad_configuration
+    assert_raise(RuntimeError) do
+      SampleModels.configure BlogPost do |b|
+        b.title.default ''
+      end
+    end
+  end
 end

@@ -40,8 +40,8 @@ module SampleModels
       @ar_class.count(:conditions => {field => value}) == 0
     end
     
-    def validations(column)
-      @validations[column.name]
+    def validations(name)
+      @validations[name.to_s]
     end
     
     class Association < Delegator
@@ -86,7 +86,7 @@ module SampleModels
       end
       
       def presence?
-        @type == :validates_presence_of?
+        @type == :validates_presence_of
       end
     end
   end

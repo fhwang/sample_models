@@ -12,7 +12,7 @@ module SampleModels
       uniqueness_validation = if force_unique
         Model::Validation.new(:validates_uniqueness_of)
       end
-      model.validations(column).each do |validation|
+      model.validations(column.name).each do |validation|
         if validation.type == :validates_uniqueness_of
           uniqueness_validation = validation
         elsif s_class = sequence_class(validation)

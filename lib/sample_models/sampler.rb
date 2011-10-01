@@ -70,7 +70,12 @@ module SampleModels
         end
         
         def default(default)
-          @sampler.defaults[@attribute] = default
+          if default.blank? and
+             @sampler.model.validations(@attribute).any?(&:presence?)
+            raise "#{@sampler.model.name} requires #{@attribute} to not be blank"
+          else
+            @sampler.defaults[@attribute] = default
+          end
         end
         
         def force_unique
