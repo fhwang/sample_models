@@ -6,10 +6,10 @@ class SampleTest < SampleModelsTestCase
       appt = Appointment.sample
       assert appt.end_time.is_a?(Time)
     end
-    assert_difference('BlogPost.count') do
-      blog_post = BlogPost.sample
-      assert blog_post.average_rating.is_a?(Float)
-    end
+    bp_count_before = BlogPost.count
+    blog_post = BlogPost.sample
+    assert blog_post.average_rating.is_a?(Float)
+    assert(BlogPost.count > bp_count_before)
     assert_difference('Show.count') do
       show = Show.sample
       assert show.subscription_price.is_a?(Integer)
