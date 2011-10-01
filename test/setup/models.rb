@@ -31,6 +31,10 @@ class BlogPostTag < ActiveRecord::Base
   belongs_to :tag
 end
 
+class Bookmark < ActiveRecord::Base
+  belongs_to :bookmarkable, :polymorphic => true
+end
+
 class Calendar < ActiveRecord::Base
   belongs_to :user
   

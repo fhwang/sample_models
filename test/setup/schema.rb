@@ -28,6 +28,11 @@ silence_stream(STDOUT) do
       t.integer "tag_id"
     end
     
+    create_table "bookmarks", :force => true do |t|
+      t.integer "bookmarkable_id"
+      t.string  "bookmarkable_type"
+    end
+
     create_table 'calendars', :force => true do |calendar|
       calendar.integer 'user_id'
     end

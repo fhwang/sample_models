@@ -68,6 +68,10 @@ module SampleModels
       def has_many?
         @assoc.macro == :has_many
       end
+      
+      def polymorphic?
+        @assoc.options[:polymorphic]
+      end
     end
     
     class Validation

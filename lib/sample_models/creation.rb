@@ -62,11 +62,18 @@ module SampleModels
     def update_with_deferred_associations!
       unless deferred_belongs_to_assocs.empty?
         deferred_belongs_to_assocs.each do |a|
-          column = model.columns.detect { |c| c.name == a.foreign_key }
-          @instance.send(
-            "#{a.foreign_key}=", 
-            @sampler.second_pass_attribute_sequence(column).next
-          )
+          if a.polymorphic?
+            klass = SampleModels.samplers.values.map(&:model).detect { |m|
+              m != @sampler.model
+            }
+            @instance.send("#{a.name}=", klass.sample)
+          else
+            column = model.columns.detect { |c| c.name == a.foreign_key }
+            @instance.send(
+              "#{a.foreign_key}=", 
+              @sampler.second_pass_attribute_sequence(column).next
+            )
+          end
         end
         save!
       end
