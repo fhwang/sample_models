@@ -1,6 +1,6 @@
 module SampleModels
   class Sampler
-    attr_accessor :before_save
+    attr_accessor :before_save, :polymorphic_default_classes
     attr_reader   :defaults
     
     def initialize(model_class)
@@ -9,6 +9,7 @@ module SampleModels
       @second_pass_attribute_sequences = {}
       @defaults = HashWithIndifferentAccess.new
       @forced_unique = []
+      @polymorphic_default_classes = HashWithIndifferentAccess.new
     end
     
     def configure(block)
@@ -76,6 +77,10 @@ module SampleModels
           else
             @sampler.defaults[@attribute] = default
           end
+        end
+        
+        def default_class(dc)
+          @sampler.polymorphic_default_classes[@attribute] = dc
         end
         
         def force_unique

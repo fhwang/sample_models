@@ -64,6 +64,11 @@ silence_stream(STDOUT) do
       show.string  'name'
     end
     
+    create_table 'subscriptions', :force => true do |subscription|
+      subscription.integer 'subscribable_id', 'user_id'
+      subscription.string  'subscribable_type'
+    end
+
     create_table "tags", :force => true do |t|
       t.string  "tag"
     end

@@ -4,7 +4,7 @@ module SampleModels
   class Creation
     def initialize(sampler, *args)
       @sampler = sampler
-      @specified_attrs = PreprocessedArgs.new(model, *args).result
+      @specified_attrs = SpecifiedAttributes.new(model, *args).result
     end
     
     def deferred_belongs_to_assocs
@@ -63,7 +63,8 @@ module SampleModels
       unless deferred_belongs_to_assocs.empty?
         deferred_belongs_to_assocs.each do |a|
           if a.polymorphic?
-            klass = SampleModels.samplers.values.map(&:model).detect { |m|
+            klass = @sampler.polymorphic_default_classes[a.name]
+            klass ||= SampleModels.samplers.values.map(&:model).detect { |m|
               m != @sampler.model
             }
             @instance.send("#{a.name}=", klass.sample)
@@ -79,7 +80,7 @@ module SampleModels
       end
     end
     
-    class PreprocessedArgs
+    class SpecifiedAttributes
       attr_reader :result
       
       def initialize(model, *args)

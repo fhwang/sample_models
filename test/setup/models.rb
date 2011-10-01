@@ -64,6 +64,11 @@ class Show < ActiveRecord::Base
   belongs_to :network
 end
 
+class Subscription < ActiveRecord::Base
+  belongs_to :subscribable, :polymorphic => true
+  belongs_to :user
+end
+
 class Tag < ActiveRecord::Base
   validates_uniqueness_of :tag
   
@@ -116,20 +121,24 @@ class VideoTakedownEvent < ActiveRecord::Base
   validates_uniqueness_of :video_id
 end
      
-SampleModels.configure Appointment do |appointment|
+SampleModels.configure(Appointment) do |appointment|
   appointment.before_save do |a|
     a.user_id = a.calendar.user_id
   end
 end
 
-SampleModels.configure BlogPost do |bp|
+SampleModels.configure(BlogPost) do |bp|
   bp.published_at.force_unique
   
   bp.funny_sample :title => 'Funny haha', :average_rating => 3.0
 end
 
-SampleModels.configure Category do |category|
+SampleModels.configure(Category) do |category|
   category.parent.default nil
+end
+
+SampleModels.configure(Subscription) do |sub|
+  sub.subscribable.default_class BlogPost
 end
 
 SampleModels.configure(Video) do |video|
