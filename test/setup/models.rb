@@ -84,7 +84,14 @@ class Video < ActiveRecord::Base
     end
   end
 end
-          
+
+class VideoTakedownEvent < ActiveRecord::Base
+  belongs_to :video
+  
+  validates_presence_of   :video_id
+  validates_uniqueness_of :video_id
+end
+     
 SampleModels.configure Appointment do |appointment|
   appointment.before_save do |a|
     a.user_id = a.calendar.user_id

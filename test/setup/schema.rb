@@ -62,5 +62,9 @@ silence_stream(STDOUT) do
     create_table 'videos', :force => true do |video|
       video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
     end
+
+    create_table 'video_takedown_events', :force => true do |vte|
+      vte.integer 'video_id'
+    end
   end
 end

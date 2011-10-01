@@ -7,6 +7,7 @@ module SampleModels
     
     def next
       @number += 1
+      @input.next if @input
       value
     end
     
@@ -77,11 +78,31 @@ module SampleModels
   end
   
   class ValidatesPresenceOfAttributeSequence < AttributeSequence
+    def initialize(model, column, validation, input)
+      super
+      @numbers_to_belongs_to_instances = {}
+    end
+    
     def value
       if assoc = @model.belongs_to_associations.detect { |a|
         a.foreign_key == @column.name
       }
-        (assoc.klass.last || assoc.klass.sample).id
+        if @numbers_to_belongs_to_instances[@number]
+          @numbers_to_belongs_to_instances[@number].id
+        else
+          previous_ids = @numbers_to_belongs_to_instances.values.map(&:id)
+          instance = nil
+          if previous_ids.empty?
+            instance = assoc.klass.last
+          else
+            instance = assoc.klass.last(
+              :conditions => ["id not in (?)", previous_ids]
+            )
+          end
+          instance ||= assoc.klass.sample
+          @numbers_to_belongs_to_instances[@number] = instance
+          instance.id
+        end
       else
         super
       end

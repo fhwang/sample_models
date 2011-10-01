@@ -13,16 +13,24 @@ module SampleModels
     
     def attribute_sequence(pass, column)
       input = base_attribute_sequence(pass, column)
+      uniqueness_validation = nil
+      if @forced_unique.include?(column.name)
+        uniqueness_validation = Model::Validation.new(:validates_uniqueness_of)
+      end
       model.validations(column).each do |validation|
-        sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
-        if SampleModels.const_defined?(sequence_name)
-          sequence_class = SampleModels.const_get(sequence_name)
-          input = sequence_class.new(model, column, validation, input)
+        if validation.type == :validates_uniqueness_of
+          uniqueness_validation = validation
+        else
+          sequence_name = validation.type.to_s.camelize + 'AttributeSequence'
+          if SampleModels.const_defined?(sequence_name)
+            sequence_class = SampleModels.const_get(sequence_name)
+            input = sequence_class.new(model, column, validation, input)
+          end
         end
       end
-      if @forced_unique.include?(column.name)
+      if uniqueness_validation
         input = ValidatesUniquenessOfAttributeSequence.new(
-          model, column, Model::Validation.new(:validates_uniqueness_of), input
+          model, column, uniqueness_validation, input
         )
       end
       input

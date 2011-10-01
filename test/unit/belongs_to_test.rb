@@ -101,4 +101,13 @@ class BelongsToTest < SampleModelsTestCase
       end
     end
   end
+  
+  def test_unique_belongs_to_should_be_unique_every_time
+    video_ids = {}
+    10.times do
+      created = VideoTakedownEvent.sample
+      assert_nil video_ids[created.video_id]
+      video_ids[created.video_id] = true
+    end
+  end
 end
