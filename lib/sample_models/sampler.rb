@@ -5,12 +5,19 @@ module SampleModels
     
     def initialize(model_class)
       @model_class = model_class
-      @first_pass_attribute_sequences = {}
-      @second_pass_attribute_sequences = {}
+      @attribute_sequences = Hash.new { |h,k| h[k] = {} }
       @defaults = HashWithIndifferentAccess.new
       @forced_unique = []
       @named_samples = HashWithIndifferentAccess.new
       @polymorphic_default_classes = HashWithIndifferentAccess.new
+    end
+    
+    def attribute_sequence(pass, column)
+      @attribute_sequences[pass][column.name] ||= begin
+        AttributeSequence.build(
+          pass, model, column, @forced_unique.include?(column.name)
+        )
+      end
     end
     
     def configure(block)
@@ -19,11 +26,7 @@ module SampleModels
     end
     
     def first_pass_attribute_sequence(column)
-      @first_pass_attribute_sequences[column.name] ||= begin
-        AttributeSequence.build(
-          :first, model, column, @forced_unique.include?(column.name)
-        )
-      end
+      attribute_sequence(:first, column)
     end
     
     def force_unique(attr)
@@ -39,11 +42,7 @@ module SampleModels
     end
     
     def second_pass_attribute_sequence(column)
-      @second_pass_attribute_sequences[column.name] ||= begin
-        AttributeSequence.build(
-          :second, model, column, @forced_unique.include?(column.name)
-        )
-      end
+      attribute_sequence(:second, column)
     end
     
     class ConfigureRecipient

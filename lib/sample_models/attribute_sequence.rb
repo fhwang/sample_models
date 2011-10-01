@@ -94,18 +94,18 @@ module SampleModels
       @previous_values = {}
     end
     
+    def belongs_assoc_value_already_used?(record)
+      @previous_values.any? { |prev_num, prev_record|
+        prev_record == record && prev_num != @number
+      }
+    end
+    
     def belongs_to_assoc_foreign_key_value
       assoc_klass = belongs_to_association.klass
       unless assoc_klass == @model.ar_class
         record = (assoc_klass.last || assoc_klass.sample)
-        already_used = @previous_values.any? { |prev_num, prev_record|
-          prev_record == record && prev_num != @number
-        }
-        while already_used
+        while belongs_assoc_value_already_used?(record)
           record = assoc_klass.sample
-          already_used = @previous_values.any? { |prev_num, prev_record|
-            prev_record == record && prev_num != @number
-          }
         end
         @previous_values[@number] = record
         record.id
