@@ -6,4 +6,10 @@ class NamedSampleTest < SampleModelsTestCase
     assert_equal 'Funny haha', bp.title
     assert_equal 3.0, bp.average_rating
   end
+  
+  def test_lets_you_override_fields
+    bp = BlogPost.sample :funny, :average_rating => 4.0
+    assert_equal 'Funny haha', bp.title
+    assert_equal 4.0, bp.average_rating
+  end
 end

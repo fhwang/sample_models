@@ -27,7 +27,11 @@ module SampleModels
       @sampler.defaults.each do |attr, val|
         attrs[attr] = val unless attrs.member?(attr)
       end
-      model.columns.each do |column|
+      columns_to_fill = model.columns.clone
+      model.validated_attr_accessors.each do |attr|
+        columns_to_fill << VirtualColumn.new(attr)
+      end
+      columns_to_fill.each do |column|
         unless attrs.member?(column.name) || 
                specified_association_value?(column.name)
           sequence = @sampler.first_pass_attribute_sequence(column)
@@ -139,6 +143,18 @@ module SampleModels
       
       def model
         @sampler.model
+      end
+    end
+
+    class VirtualColumn
+      attr_reader :name
+      
+      def initialize(name)
+        @name = name
+      end
+      
+      def type
+        :string
       end
     end
   end

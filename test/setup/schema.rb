@@ -78,6 +78,9 @@ silence_stream(STDOUT) do
       user.string  'email', 'gender', 'homepage', 'login', 'password'
     end
 
+    create_table 'user_with_passwords', :force => true do |user|
+    end
+    
     create_table 'videos', :force => true do |video|
       video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
     end

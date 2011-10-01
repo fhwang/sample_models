@@ -42,6 +42,12 @@ module SampleModels
       @ar_class.count(:conditions => {field => value}) == 0
     end
     
+    def validated_attr_accessors
+      @validations.keys.select { |key|
+        columns.none? { |column| column.name.to_s == key.to_s }
+      }
+    end
+    
     def validations(name)
       @validations[name.to_s]
     end

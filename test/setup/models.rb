@@ -87,6 +87,12 @@ class User < ActiveRecord::Base
   validates_uniqueness_of   :external_user_id, :allow_nil => true
 end
 
+class UserWithPassword < ActiveRecord::Base
+  attr_accessor :password
+  
+  validates_presence_of :password
+end
+
 class Video < ActiveRecord::Base
   belongs_to :show
   belongs_to :network                

@@ -95,4 +95,14 @@ class SampleTest < SampleModelsTestCase
       emails[custom.email] = true
     end
   end
+  
+  def test_required_date_field
+    episode = Episode.sample
+    assert episode.original_air_date.is_a?(Date)
+  end
+
+  def test_required_accessor
+    user_with_password = UserWithPassword.sample
+    assert user_with_password.password.present?
+  end
 end
