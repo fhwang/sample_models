@@ -84,7 +84,10 @@ module SampleModels
           assign_associated_record_from_args(associated_value)
         end
         @model.belongs_to_associations.each do |assoc|
-          build_associated_record_from_shortcut_args(assoc)
+          build_belongs_to_record_from_shortcut_args(assoc)
+        end
+        @model.has_many_associations.each do |assoc|
+          build_has_many_record_from_shortcut_args(assoc)
         end
       end
       
@@ -103,13 +106,21 @@ module SampleModels
         end
       end
       
-      def build_associated_record_from_shortcut_args(assoc)
+      def build_belongs_to_record_from_shortcut_args(assoc)
         if value = @result[assoc.name]
           if value.is_a?(Hash)
             @result[assoc.name] = assoc.klass.sample(value)
           elsif value.is_a?(Array)
             @result[assoc.name] = assoc.klass.sample(*value)
           end
+        end
+      end
+      
+      def build_has_many_record_from_shortcut_args(assoc)
+        if values = @result[assoc.name]
+          @result[assoc.name] = values.map { |value|
+            value.is_a?(Hash) ? assoc.klass.sample(value) : value
+          }
         end
       end
     end

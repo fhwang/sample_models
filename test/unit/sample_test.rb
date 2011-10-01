@@ -68,4 +68,31 @@ class SampleTest < SampleModelsTestCase
       assert(User.sample != User.sample)
     end
   end
+  
+  def test_unique_string_attribute
+    logins = []
+    10.times do
+      custom = User.sample
+      assert !logins.include?(custom.login)
+      logins << custom.login
+    end
+  end
+  
+  def test_unique_time_attribute
+    times = {}
+    10.times do
+      custom = Appointment.sample
+      assert times[custom.start_time].nil?
+      times[custom.start_time] = true
+    end
+  end
+  
+  def test_unique_email_attribute
+    emails = {}
+    10.times do
+      custom = User.sample
+      assert emails[custom.email].nil?
+      emails[custom.email] = true
+    end
+  end
 end

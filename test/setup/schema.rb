@@ -23,6 +23,11 @@ silence_stream(STDOUT) do
       blog_post.float   'average_rating'
     end
     
+    create_table "blog_post_tags", :force => true do |t|
+      t.integer "blog_post_id"
+      t.integer "tag_id"
+    end
+    
     create_table 'calendars', :force => true do |calendar|
       calendar.integer 'user_id'
     end
@@ -53,6 +58,10 @@ silence_stream(STDOUT) do
       show.integer 'network_id', 'subscription_price'
       show.string  'name'
     end
+    
+    create_table "tags", :force => true do |t|
+      t.string  "tag"
+    end
 
     create_table 'users', :force => true do |user|
       user.integer 'favorite_blog_post_id', 'external_user_id'
@@ -63,6 +72,10 @@ silence_stream(STDOUT) do
       video.integer 'episode_id', 'show_id', 'network_id', 'view_count'
     end
 
+    create_table 'video_favorites', :force => true do |video_favorite|
+      video_favorite.integer 'user_id', 'video_id'
+    end
+  
     create_table 'video_takedown_events', :force => true do |vte|
       vte.integer 'video_id'
     end

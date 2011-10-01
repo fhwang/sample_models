@@ -26,6 +26,11 @@ class BlogPost < ActiveRecord::Base
   validates_presence_of :user_id
 end
 
+class BlogPostTag < ActiveRecord::Base
+  belongs_to :blog_post
+  belongs_to :tag
+end
+
 class Calendar < ActiveRecord::Base
   belongs_to :user
   
@@ -53,6 +58,13 @@ end
 
 class Show < ActiveRecord::Base
   belongs_to :network
+end
+
+class Tag < ActiveRecord::Base
+  validates_uniqueness_of :tag
+  
+  has_many :blog_post_tags
+  has_many :blog_posts, :through => :blog_post_tags
 end
 
 class User < ActiveRecord::Base
@@ -83,6 +95,14 @@ class Video < ActiveRecord::Base
       end
     end
   end
+end
+
+class VideoFavorite < ActiveRecord::Base
+  belongs_to :video
+  belongs_to :user
+  
+  validates_presence_of :user_id, :video_id
+  validates_uniqueness_of :video_id, :scope => :user_id
 end
 
 class VideoTakedownEvent < ActiveRecord::Base

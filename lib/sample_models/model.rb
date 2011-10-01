@@ -23,6 +23,10 @@ module SampleModels
       associations.select { |a| a.belongs_to? }
     end
     
+    def has_many_associations
+      associations.select { |a| a.has_many? }
+    end
+    
     def record_validation(*args)
       type = args.shift
       config = args.extract_options!
@@ -59,6 +63,10 @@ module SampleModels
         else
           @assoc.primary_key_name
         end
+      end
+      
+      def has_many?
+        @assoc.macro == :has_many
       end
     end
     

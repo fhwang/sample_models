@@ -110,4 +110,15 @@ class BelongsToTest < SampleModelsTestCase
       video_ids[created.video_id] = true
     end
   end
+  
+  def test_unique_scoped_belongs_to
+    video_fav1 = VideoFavorite.sample
+    video_fav2 = VideoFavorite.sample :user => video_fav1.user
+    assert_equal video_fav1.user, video_fav2.user
+    # VideoFavorites validate uniqueenes of video_id in scope of user_id. Since
+    # these two VideoFavorite instances have the same User, SampleModels should 
+    # automatically create a new Video for the same User, and then attach the 
+    # 2nd VideoFavorite to the new Video.
+    assert_not_equal video_fav1.video, video_fav2.video
+  end
 end
