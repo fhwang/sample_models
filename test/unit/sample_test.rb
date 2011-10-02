@@ -111,4 +111,10 @@ class SampleTest < SampleModelsTestCase
     User2.create!(:login => 'login 1')
     User2.sample
   end
+  
+  def test_create_sample_works_for_now
+    assert_difference('Appointment.count') do
+      appt = Appointment.create_sample
+    end
+  end
 end

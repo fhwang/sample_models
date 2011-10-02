@@ -25,6 +25,11 @@ module SampleModels
   end
 
   module ARClassMethods
+    def create_sample(*args)
+      ActiveSupport::Deprecation.warn("#{self.name}.create_sample is deprecated and will be removed in the next major version of SampleModels. Call #{self.name}.sample instead")
+      sample(*args)
+    end
+    
     def sample(*args)
       SampleModels.samplers[self].sample(*args)
     end
