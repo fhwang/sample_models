@@ -80,4 +80,9 @@ class ConfigurationTest < SampleModelsTestCase
     assert_nil user.external_user
     assert_nil user.external_user_id
   end
+  
+  def test_attr_accessor_can_have_configured_default
+    blog_post = BlogPost.sample
+    assert_equal('I am an instance attribute', blog_post.instance_attribute)
+  end
 end

@@ -24,6 +24,8 @@ class BlogPost < ActiveRecord::Base
   
   validates_presence_of :title
   validates_presence_of :user_id
+  
+  attr_accessor :instance_attribute
 end
 
 class BlogPostTag < ActiveRecord::Base
@@ -139,6 +141,7 @@ SampleModels.configure(Appointment) do |appointment|
 end
 
 SampleModels.configure(BlogPost) do |bp|
+  bp.instance_attribute.default 'I am an instance attribute'
   bp.published_at.force_unique
   
   bp.funny_sample :title => 'Funny haha', :average_rating => 3.0
