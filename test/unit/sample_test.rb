@@ -124,4 +124,11 @@ class SampleTest < SampleModelsTestCase
     assert_in_delta(Time.now.utc, blog_post.created_at, 5)
     assert_in_delta(Time.now.utc, blog_post.updated_at, 5)
   end
+  
+  def test_dates_and_times_start_from_now_and_sequence_down
+    blog_post = BlogPost.sample
+    assert(Time.now.utc.advance(:years => -1) < blog_post.published_at)
+    episode = Episode.sample
+    assert(Date.today - 365 < episode.original_air_date)
+  end
 end

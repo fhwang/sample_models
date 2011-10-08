@@ -28,9 +28,9 @@ module SampleModels
         when :integer
           belongs_to_association ? belongs_to_assoc_foreign_key_value : @number
         when :datetime
-          Time.utc(1970, 1, 1) + @number.days
+          Time.now.utc - @number.minutes
         when :date
-          Date.today + @number
+          Date.today - @number
         when :float
           @number.to_f
         end
