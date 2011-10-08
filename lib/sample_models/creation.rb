@@ -7,6 +7,12 @@ module SampleModels
       @specified_attrs = SpecifiedAttributes.new(sampler, *args).result
     end
     
+    def belongs_to_assoc(column_name)
+      model.belongs_to_associations.detect { |assoc|
+        assoc.foreign_key == column_name
+      }
+    end
+    
     def deferred_belongs_to_assocs
       @deferred_belongs_to_assocs ||= begin
         model.belongs_to_associations.select { |a|
@@ -35,7 +41,7 @@ module SampleModels
       columns_to_fill.each do |column|
         unless attrs.member?(column.name) || 
                specified_association_value?(column.name) ||
-               ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name))
+               ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name)) || timestamp?(column.name)
           sequence = @sampler.first_pass_attribute_sequence(column)
           attrs[column.name] = sequence.next
         end
@@ -57,18 +63,16 @@ module SampleModels
       @instance.save!
     end
     
-    def belongs_to_assoc(column_name)
-      model.belongs_to_associations.detect { |assoc|
-        assoc.foreign_key == column_name
-      }
-    end
-    
     def specified_association_value?(column_name)
       @specified_attrs.any? { |attr, val|
         if assoc = model.belongs_to_association(attr)
           assoc.foreign_key == column_name
         end
       }
+    end
+    
+    def timestamp?(column_name)
+      %w(created_at updated_at created_on updated_on).include?(column_name)
     end
   
     def update_with_deferred_associations!

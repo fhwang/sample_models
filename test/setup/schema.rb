@@ -22,6 +22,7 @@ silence_stream(STDOUT) do
       blog_post.string  'title'
       blog_post.float   'average_rating'
       blog_post.text    'body'
+      blog_post.timestamps
     end
     
     create_table "blog_post_tags", :force => true do |t|

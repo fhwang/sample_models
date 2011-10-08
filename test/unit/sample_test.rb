@@ -118,4 +118,10 @@ class SampleTest < SampleModelsTestCase
       appt = Appointment.create_sample
     end
   end
+  
+  def test_doesnt_mess_with_created_at_or_updated_at
+    blog_post = BlogPost.sample
+    assert_in_delta(Time.now.utc, blog_post.created_at, 5)
+    assert_in_delta(Time.now.utc, blog_post.updated_at, 5)
+  end
 end
