@@ -10,6 +10,7 @@ class SampleTest < SampleModelsTestCase
     blog_post = BlogPost.sample
     assert blog_post.average_rating.is_a?(Float)
     assert(BlogPost.count > bp_count_before)
+    assert_not_nil(blog_post.body)
     assert_difference('Show.count') do
       show = Show.sample
       assert show.subscription_price.is_a?(Integer)

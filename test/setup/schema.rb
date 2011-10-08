@@ -21,6 +21,7 @@ silence_stream(STDOUT) do
       blog_post.integer 'merged_into_id', 'user_id'
       blog_post.string  'title'
       blog_post.float   'average_rating'
+      blog_post.text    'body'
     end
     
     create_table "blog_post_tags", :force => true do |t|

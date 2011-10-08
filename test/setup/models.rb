@@ -22,6 +22,7 @@ class BlogPost < ActiveRecord::Base
   has_many   :tags, :through => :blog_post_tags
   belongs_to :user
   
+  validates_presence_of :body
   validates_presence_of :title
   validates_presence_of :user_id
   

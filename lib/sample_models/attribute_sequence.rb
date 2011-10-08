@@ -23,7 +23,7 @@ module SampleModels
     
     def value
       case @column.type
-        when :string
+        when :string, :text
           "#{@column.name} #{@number}"
         when :integer
           belongs_to_association ? belongs_to_assoc_foreign_key_value : @number
