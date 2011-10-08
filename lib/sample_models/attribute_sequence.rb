@@ -37,9 +37,8 @@ module SampleModels
     end
     
     class Builder
-      def initialize(pass, model, column, force_unique)
-        @pass, @model, @column, @force_unique =
-          pass, model, column, force_unique
+      def initialize(pass, model, column, config)
+        @pass, @model, @column, @config = pass, model, column, config
       end
       
       def base
@@ -50,23 +49,27 @@ module SampleModels
       end
   
       def run
-        input = base
-        uniqueness_validation = if @force_unique
-          Model::Validation.new(:validates_uniqueness_of)
-        end
-        @model.validations(@column.name).each do |validation|
-          if validation.type == :validates_uniqueness_of
-            uniqueness_validation = validation
-          elsif s_class = sequence_class(validation)
-            input = s_class.new(@model, @column, validation, input)
+        if @config.member?(:default)
+          ConfiguredDefaultSequence.new(@config[:default])
+        else
+          input = base
+          uniqueness_validation = if @config[:force_unique]
+            Model::Validation.new(:validates_uniqueness_of)
           end
+          @model.validations(@column.name).each do |validation|
+            if validation.type == :validates_uniqueness_of
+              uniqueness_validation = validation
+            elsif s_class = sequence_class(validation)
+              input = s_class.new(@model, @column, validation, input)
+            end
+          end
+          if uniqueness_validation
+            input = ValidatesUniquenessOfAttributeSequence.new(
+              @model, @column, uniqueness_validation, input
+            )
+          end
+          input
         end
-        if uniqueness_validation
-          input = ValidatesUniquenessOfAttributeSequence.new(
-            @model, @column, uniqueness_validation, input
-          )
-        end
-        input
       end
       
       def sequence_class(validation)
@@ -75,6 +78,18 @@ module SampleModels
           SampleModels.const_get(sequence_name)
         end
       end
+    end
+  end
+  
+  class ConfiguredDefaultSequence
+    attr_reader :value
+    
+    def initialize(value)
+      @value = value
+    end
+    
+    def next
+      value
     end
   end
   

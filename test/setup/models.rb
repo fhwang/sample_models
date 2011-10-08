@@ -79,6 +79,12 @@ class Tag < ActiveRecord::Base
   has_many :blog_posts, :through => :blog_post_tags
 end
 
+class Topic < ActiveRecord::Base
+  belongs_to :parent, :class_name => 'Topic'
+  
+  validates_presence_of :parent_id
+end
+
 class User < ActiveRecord::Base
   belongs_to :favorite_blog_post,
              :class_name => 'BlogPost', :foreign_key => 'favorite_blog_post_id'
@@ -154,6 +160,30 @@ end
 
 SampleModels.configure(Subscription) do |sub|
   sub.subscribable.default_class BlogPost
+end
+
+SampleModels.configure(Topic) do |topic|
+  topic.parent.default nil
+  
+  topic.before_save do |t, sample_attrs|
+    if t.parent.nil?
+      root = Topic.find_by_root(true)
+      unless root
+        # presumably if you're being this strict about self-parenting, you'd 
+        # hook right into the table's primary key sequence. The logic below 
+        # should work well enough for the test cases though.
+        root = Topic.new(:name => 'Root', :root => true)
+        max_h = Topic.connection.select_one("select max(id) from topics")
+        if max_h['max']
+          root.parent_id = max_h['max'].to_i + 1
+        else
+          root.parent_id = 1
+        end
+        root.save!
+      end
+      t.parent = root
+    end
+  end
 end
 
 SampleModels.configure(User) do |user|

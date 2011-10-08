@@ -85,4 +85,9 @@ class ConfigurationTest < SampleModelsTestCase
     blog_post = BlogPost.sample
     assert_equal('I am an instance attribute', blog_post.instance_attribute)
   end
+  
+  def test_belongs_to_configured_to_set_in_a_before_save
+    topic = Topic.sample(:name => 'Comedy')
+    assert(topic.parent.root?)
+  end
 end

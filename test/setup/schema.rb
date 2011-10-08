@@ -74,6 +74,12 @@ silence_stream(STDOUT) do
       t.string  "tag"
     end
 
+    create_table 'topics', :force => true do |t|
+      t.string  'name'
+      t.integer 'parent_id'
+      t.boolean 'root', :default => false
+    end
+
     create_table 'users', :force => true do |user|
       user.integer 'favorite_blog_post_id', 'external_user_id'
       user.string  'email', 'gender', 'homepage', 'login', 'password'
