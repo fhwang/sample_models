@@ -37,8 +37,28 @@ module SampleModels
     end
     
     class Builder
-      def initialize(pass, model, column, config)
-        @pass, @model, @column, @config = pass, model, column, config
+      def initialize(pass, model, column, configs)
+        @pass, @model, @column, @configs = pass, model, column, configs
+        defaults = configs[:defaults] || {}
+        if defaults.member?(column.name)
+          @default_is_configured = true
+          @configured_default_value = defaults[column.name]
+        else
+          assoc = model.belongs_to_associations.detect { |a|
+            a.foreign_key == column.name
+          }
+          if assoc && defaults.member?(assoc.name)
+            @default_is_configured = true
+            default_assoc_value = defaults[assoc.name]
+            if default_assoc_value.class.ancestors.include?(ActiveRecord::Base)
+              @configured_default_value = default_assoc_value.id
+            elsif default_assoc_value.nil?
+              @configured_default_value = nil
+            else
+              raise "Not sure how to assign default value #{default_assoc_value.inspect} to #{@model_class.name}##{assoc.name}"
+            end
+          end
+        end
       end
       
       def base
@@ -47,13 +67,17 @@ module SampleModels
         )
         base_class.new(@model, @column)
       end
+      
+      def forced_unique?
+        @configs[:forced_unique].include?(@column.name)
+      end
   
       def run
-        if @config.member?(:default)
-          ConfiguredDefaultSequence.new(@config[:default])
+        if @default_is_configured
+          ConfiguredDefaultSequence.new(@configured_default_value)
         else
           input = base
-          uniqueness_validation = if @config[:force_unique]
+          uniqueness_validation = if forced_unique?
             Model::Validation.new(:validates_uniqueness_of)
           end
           @model.validations(@column.name).each do |validation|
