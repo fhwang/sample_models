@@ -66,14 +66,6 @@ class ConfigurationTest < SampleModelsTestCase
     end
   end
   
-  def test_error_on_bad_configuration
-    assert_raise(RuntimeError) do
-      SampleModels.configure BlogPost do |b|
-        b.title.default ''
-      end
-    end
-  end
-  
   def test_validate_uniqueness_with_an_allow_nil_allows_nil_configuration
     User.sample
     user = User.sample

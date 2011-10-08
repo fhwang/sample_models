@@ -75,12 +75,7 @@ module SampleModels
         end
         
         def default(default)
-          if default.blank? and
-             @sampler.model.validations(@attribute).any?(&:presence?)
-            raise "#{@sampler.model.name} requires #{@attribute} to not be blank"
-          else
-            @sampler.defaults[@attribute] = default
-          end
+          @sampler.defaults[@attribute] = default
         end
         
         def default_class(dc)
