@@ -34,7 +34,8 @@ module SampleModels
       end
       columns_to_fill.each do |column|
         unless attrs.member?(column.name) || 
-               specified_association_value?(column.name)
+               specified_association_value?(column.name) ||
+               ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name))
           sequence = @sampler.first_pass_attribute_sequence(column)
           attrs[column.name] = sequence.next
         end
@@ -54,6 +55,12 @@ module SampleModels
         end
       end
       @instance.save!
+    end
+    
+    def belongs_to_assoc(column_name)
+      model.belongs_to_associations.detect { |assoc|
+        assoc.foreign_key == column_name
+      }
     end
     
     def specified_association_value?(column_name)

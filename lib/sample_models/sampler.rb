@@ -14,10 +14,9 @@ module SampleModels
     
     def attribute_sequence(pass, column)
       @attribute_sequences[pass][column.name] ||= begin
-        configs = HashWithIndifferentAccess.new(
-          :defaults => @defaults, :forced_unique => @forced_unique
+        AttributeSequence.build(
+          pass, model, column, @forced_unique.include?(column.name)
         )
-        AttributeSequence.build(pass, model, column, configs)
       end
     end
     

@@ -37,28 +37,9 @@ module SampleModels
     end
     
     class Builder
-      def initialize(pass, model, column, configs)
-        @pass, @model, @column, @configs = pass, model, column, configs
-        defaults = configs[:defaults] || {}
-        if defaults.member?(column.name)
-          @default_is_configured = true
-          @configured_default_value = defaults[column.name]
-        else
-          assoc = model.belongs_to_associations.detect { |a|
-            a.foreign_key == column.name
-          }
-          if assoc && defaults.member?(assoc.name)
-            @default_is_configured = true
-            default_assoc_value = defaults[assoc.name]
-            if default_assoc_value.class.ancestors.include?(ActiveRecord::Base)
-              @configured_default_value = default_assoc_value.id
-            elsif default_assoc_value.nil?
-              @configured_default_value = nil
-            else
-              raise "Not sure how to assign default value #{default_assoc_value.inspect} to #{@model_class.name}##{assoc.name}"
-            end
-          end
-        end
+      def initialize(pass, model, column, force_unique)
+        @pass, @model, @column, @force_unique =
+          pass, model, column, force_unique
       end
       
       def base
@@ -67,33 +48,25 @@ module SampleModels
         )
         base_class.new(@model, @column)
       end
-      
-      def forced_unique?
-        @configs[:forced_unique].include?(@column.name)
-      end
   
       def run
-        if @default_is_configured
-          ConfiguredDefaultSequence.new(@configured_default_value)
-        else
-          input = base
-          uniqueness_validation = if forced_unique?
-            Model::Validation.new(:validates_uniqueness_of)
-          end
-          @model.validations(@column.name).each do |validation|
-            if validation.type == :validates_uniqueness_of
-              uniqueness_validation = validation
-            elsif s_class = sequence_class(validation)
-              input = s_class.new(@model, @column, validation, input)
-            end
-          end
-          if uniqueness_validation
-            input = ValidatesUniquenessOfAttributeSequence.new(
-              @model, @column, uniqueness_validation, input
-            )
-          end
-          input
+        input = base
+        uniqueness_validation = if @force_unique
+          Model::Validation.new(:validates_uniqueness_of)
         end
+        @model.validations(@column.name).each do |validation|
+          if validation.type == :validates_uniqueness_of
+            uniqueness_validation = validation
+          elsif s_class = sequence_class(validation)
+            input = s_class.new(@model, @column, validation, input)
+          end
+        end
+        if uniqueness_validation
+          input = ValidatesUniquenessOfAttributeSequence.new(
+            @model, @column, uniqueness_validation, input
+          )
+        end
+        input
       end
       
       def sequence_class(validation)
@@ -102,18 +75,6 @@ module SampleModels
           SampleModels.const_get(sequence_name)
         end
       end
-    end
-  end
-  
-  class ConfiguredDefaultSequence
-    attr_reader :value
-    
-    def initialize(value)
-      @value = value
-    end
-    
-    def next
-      value
     end
   end
   
