@@ -127,19 +127,24 @@ module SampleModels
   
   class ValidatesPresenceOfAttributeSequence < AttributeSequence
     def belongs_to_value
-      @previous_belongs_to_values ||= {}
-      if @previous_belongs_to_values[@number]
-        @previous_belongs_to_values[@number].id
+      @previous_belongs_to_instances ||= {}
+      if @previous_belongs_to_instances[@number]
+        value = @previous_belongs_to_instances[@number]
+        begin
+          value.reload
+          value.id
+        rescue ActiveRecord::RecordNotFound
+          set_belongs_to_instance
+          @previous_belongs_to_instances[@number].id
+        end
       else
-        instance = existing_instance_not_previously_returned
-        instance ||= belongs_to_association.klass.sample
-        @previous_belongs_to_values[@number] = instance
-        instance.id
+        set_belongs_to_instance
+        @previous_belongs_to_instances[@number].id
       end
     end
     
     def existing_instance_not_previously_returned
-      previous_ids = @previous_belongs_to_values.values.map(&:id)
+      previous_ids = @previous_belongs_to_instances.values.map(&:id)
       instance = nil
       if previous_ids.empty?
         belongs_to_association.klass.last
@@ -148,6 +153,12 @@ module SampleModels
           :conditions => ["id not in (?)", previous_ids]
         )
       end
+    end
+    
+    def set_belongs_to_instance
+      instance = existing_instance_not_previously_returned
+      instance ||= belongs_to_association.klass.sample
+      @previous_belongs_to_instances[@number] = instance
     end
     
     def value

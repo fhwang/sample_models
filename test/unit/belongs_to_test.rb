@@ -133,4 +133,11 @@ class BelongsToTest < SampleModelsTestCase
       blog_post = BlogPost.sample
     end
   end
+  
+  def test_assoc_if_the_record_was_destroyed
+    bp1 = BlogPost.sample
+    bp1.user.destroy
+    bp2 = BlogPost.sample
+    assert_equal(User, bp2.user.class)
+  end
 end
