@@ -126,4 +126,11 @@ class BelongsToTest < SampleModelsTestCase
     blog_post = BlogPost.sample
     assert_nil blog_post.merged_into
   end
+  
+  def test_assoc_doesnt_require_creation_just_because_its_presence_is_required
+    calendar = Calendar.sample
+    assert_no_difference('User.count') do
+      blog_post = BlogPost.sample
+    end
+  end
 end

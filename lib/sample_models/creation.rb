@@ -43,7 +43,7 @@ module SampleModels
                specified_association_value?(column.name) ||
                ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name)) || timestamp?(column.name)
           sequence = @sampler.first_pass_attribute_sequence(column)
-          attrs[column.name] = sequence.next
+          attrs[column.name] = sequence.value
         end
       end
       @instance = model.new(attrs)
