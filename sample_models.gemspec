@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{sample_models}
-  s.version = "1.2.4"
+  s.version = "1.2.5"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Francis Hwang"]
-  s.date = %q{2011-07-16}
+  s.date = %q{2011-11-16}
   s.description = %q{
 A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:
 
@@ -58,11 +58,10 @@ A library for making it extremely fast for Rails developers to set up and save A
   s.homepage = %q{http://github.com/fhwang/sample_models}
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
+  s.rubygems_version = %q{1.6.2}
   s.summary = %q{A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases}
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
