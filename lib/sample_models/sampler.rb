@@ -49,8 +49,12 @@ module SampleModels
     def fix_deleted_associations(instance, orig_attrs)
       needs_save = false
       model.belongs_to_associations.each do |assoc|
-        if instance.send(assoc.primary_key_name) && 
-           !instance.send(assoc.name)
+        foreign_key = if assoc.respond_to?(:foreign_key)
+          assoc.foreign_key
+        else
+          assoc.primary_key_name
+        end
+        if instance.send(foreign_key) && !instance.send(assoc.name)
          instance.send("#{assoc.name}=", assoc.klass.sample)
          needs_save = true
         end

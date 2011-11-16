@@ -3,7 +3,7 @@ require 'rake/testtask'
 require 'rake/rdoctask'
 require 'rubygems'
 
-ActiveRecordVersions = %w(3.0.1 2.3.10 2.3.5)
+ActiveRecordVersions = %w(3.1.1 3.0.1 2.3.10)
 
 desc "Run all tests"
 task :test do

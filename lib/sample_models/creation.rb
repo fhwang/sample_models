@@ -21,7 +21,7 @@ module SampleModels
     end
     
     def run
-      @instance = @sampler.model_class.new @attrs
+      @instance = @sampler.model_class.new @attrs.to_hash
       save!
       update_associations
       @instance
@@ -72,7 +72,12 @@ module SampleModels
           fill_based_on_string_column_type(column)
         when :integer
           unless model.belongs_to_associations.any? { |assoc|
-            assoc.primary_key_name == column.name
+            foreign_key = if assoc.respond_to?(:foreign_key)
+              assoc.foreign_key
+            else
+              assoc.primary_key_name
+            end
+            foreign_key == column.name
           }
             self[column.name] = 1
           end

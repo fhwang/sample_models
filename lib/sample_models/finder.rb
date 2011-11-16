@@ -31,8 +31,13 @@ module SampleModels
     
     def attach_belongs_to_associations_to_query
       @model.belongs_to_associations.each do |assoc|
+        foreign_key = if assoc.respond_to?(:foreign_key)
+          assoc.foreign_key
+        else
+          assoc.primary_key_name
+        end
         if @attrs.keys.include?(assoc.name.to_s)
-          @ar_query.conditions[assoc.primary_key_name] = if @attrs[assoc.name]
+          @ar_query.conditions[foreign_key] = if @attrs[assoc.name]
             @attrs[assoc.name].id
           else
             @attrs[assoc.name]
