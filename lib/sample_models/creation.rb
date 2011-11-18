@@ -107,7 +107,12 @@ module SampleModels
         model.validation_collections.each do |field, validation_collection|
           assoc_key = nil
           if assoc = model.belongs_to_associations.detect { |a|
-            a.association_foreign_key == field.to_s
+            foreign_key = if a.respond_to?(:foreign_key)
+              a.foreign_key
+            else
+              a.primary_key_name
+            end
+            foreign_key == field.to_s
           }
             assoc_key = assoc.name
           end
