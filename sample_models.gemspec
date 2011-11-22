@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{sample_models}
-  s.version = "1.2.4"
+  s.version = "2.0.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Francis Hwang"]
-  s.date = %q{2011-07-16}
+  s.date = %q{2011-11-22}
   s.description = %q{
 A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:
 
@@ -32,37 +32,32 @@ A library for making it extremely fast for Rails developers to set up and save A
     "init.rb",
     "install.rb",
     "lib/sample_models.rb",
+    "lib/sample_models/attribute_sequence.rb",
     "lib/sample_models/creation.rb",
-    "lib/sample_models/finder.rb",
+    "lib/sample_models/initializer.rb",
     "lib/sample_models/model.rb",
     "lib/sample_models/sampler.rb",
     "sample_models.gemspec",
-    "spec/sample_models_spec.rb",
-    "spec_or_test/database.yml",
-    "spec_or_test/setup.rb",
-    "spec_or_test/specs_or_test_cases.rb",
     "tasks/sample_models_tasks.rake",
     "test/db/placeholder",
-    "test/test_sample_models.rb",
-    "uninstall.rb",
-    "vendor/ar_query/MIT-LICENSE",
-    "vendor/ar_query/README",
-    "vendor/ar_query/ar_query.gemspec",
-    "vendor/ar_query/init.rb",
-    "vendor/ar_query/install.rb",
-    "vendor/ar_query/lib/ar_query.rb",
-    "vendor/ar_query/spec/ar_query_spec.rb",
-    "vendor/ar_query/tasks/ar_query_tasks.rake",
-    "vendor/ar_query/uninstall.rb"
+    "test/setup/models.rb",
+    "test/setup/schema.rb",
+    "test/test_helper.rb",
+    "test/unit/belongs_to_test.rb",
+    "test/unit/configuration_test.rb",
+    "test/unit/has_many_through_test.rb",
+    "test/unit/named_sample_test.rb",
+    "test/unit/polymorphic_belongs_to_test.rb",
+    "test/unit/sample_test.rb",
+    "uninstall.rb"
   ]
   s.homepage = %q{http://github.com/fhwang/sample_models}
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
+  s.rubygems_version = %q{1.6.2}
   s.summary = %q{A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases}
 
   if s.respond_to? :specification_version then
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
