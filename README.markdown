@@ -141,7 +141,7 @@ You can also specify these associations as if you were calling `new` or `create!
     BlogPost.sample(:user => kelley)
     BlogPost.sample(:user_id => kelley.id)
 
-If you want, you can simply specify the record at the beginning of the argument list for `sample` or `create_sample`, and SampleModels will assign them to the appropriate association, as long as there's only one association that fits the class.
+If you want, you can simply specify the record at the beginning of the argument list for `sample`, and SampleModels will assign them to the appropriate association, as long as there's only one association that fits the class.
 
     kim = User.sample(:first_name => 'Kim')
     BlogPost.sample(kim, :title => 'funny')
@@ -248,7 +248,7 @@ With `before_save` you can specify a block that runs before the record is saved.
       end
     end
 
-You can also take a second argument, which will pass in the hash that was used during the call to `sample` or `create_sample`.
+You can also take a second argument, which will pass in the hash that was used during the call to `sample`.
 
     SampleModels.configure(Appointment) do |appt|
       appt.before_save do |appt_record, sample_attrs|
@@ -301,7 +301,7 @@ Named samples can be used to pre-set values for commonly used combinations of at
     bp1 = BlogPost.sample(:funny)
     puts bp1.title   # => 'Laugh already'
 
-    bp2 = BlogPost.create_sample(:funny)
+    bp2 = BlogPost.sample(:funny)
     puts bp2.title      # => 'Laugh already'
     puts (bp1 == bp2)   # => false
     
