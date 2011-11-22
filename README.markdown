@@ -8,7 +8,7 @@ A library for making it extremely fast for Rails developers to set up and save A
 * give you a rich set of features so you can specify associations as concisely as possible
 * do this with as little configuration as possible
 
-Feature overview
+Overview
 ================
 
 Let's say you've got a set of models that look like this:
@@ -69,6 +69,11 @@ You can specify associated records in the sample call:
     sad = Tag.sample(:tag => 'sad')
     funny_yet_sad = BlogPost.sample(:tags => [funny, sad])
     
+You can also specify associated records by passing them in at the beginning of the argument list, if there's only one association that would work with the record's class:
+
+    jane = User.sample(:first_name => 'Jane')
+    BlogPost.sample(jane, :title => 'What I ate for lunch')
+    
 You can also specify associated records by passing in hashes or arrays:
 
     bills_post2 = BlogPost.sample(:user => {:first_name => 'Bill'})
@@ -78,11 +83,6 @@ You can also specify associated records by passing in hashes or arrays:
       :tags => [{:tag => 'funny'}, {:tag => 'sad'}]
     )
     puts funny_yet_sad2.tags.size     # => 2
-    
-You can also specify associated records by passing them in at the beginning of the argument list, if there's only one association that would work with the record's class:
-
-    jane = User.sample(:first_name => 'Jane')
-    BlogPost.sample(jane, :title => 'What I ate for lunch')
 
 Instance attributes
 =========================
@@ -94,12 +94,12 @@ SampleModels reads your validations to get hints about how to craft an instance 
 validates_email_format_of
 -------------------------
 
-If you use the validates_email_format_of plugin at [http://github.com/alexdunae/validates_email_format_of](http://github.com/alexdunae/validates_email_format_of), SampleModels will ensure that the attribute in question is a valid email address.
+If you use the [validates_email_format_of gem](http://rubygems.org/gems/validates_email_format_of), SampleModels will ensure that the attribute in question is a valid email address.
 
 validates_presence_of
 ---------------------
 
-SampleModels already sets values to be non-blank, but this validation comes in handy if you have an `attr_accessor`:
+SampleModels already sets database columns to be non-blank, but this validation comes in handy if you have an `attr_accessor`:
 
     class UserWithPassword < ActiveRecord::Base
       attr_accessor :password
@@ -122,35 +122,6 @@ validates_uniqueness_of
 
 SampleModels will ensure that new instances will have different values for attributes where uniqueness is required, as discussed below under "New records vs. old records."
 
-
-New records vs. old records
-===========================
-
-Most of the time, consecutive calls to `sample` will return the same record, because this is marginally faster, and the design assumption is that if you're calling `sample` you don't care which instance you get as long as it satisfies the attributes you specified.
-
-    user1 = User.sample
-    user2 = User.sample
-    puts (user1 == user2)   # probably true
-    
-    rick1 = User.sample(:first_name => 'Rick')
-    puts (user1 == rick1)   # probably false, but you never know
-    
-    rick2 = User.sample(:first_name => 'Rick')
-    puts (rick1 == rick2)   # probably true
-    
-If having a distinct record is important to the test, you should call `create_sample`, which always saves a new record in the DB and returns it.
-
-    blog_post1 = BlogPost.sample
-    blog_post2 = BlogPost.create_sample
-    puts (blog_post1 == blog_post2)   # will always be false
-
-If the class validates the uniqueness of a field, that field will always be distinct for every new instance returned by `create_sample`.
-
-    tag1 = Tag.sample
-    tag2 = Tag.create_sample
-    puts (tag1 == tag2)           # will always be false
-    puts (tag1.tag == tag2.tag)   # will always be false, because Tag validates
-                                  # the uniqueness of the `tag` attribute
 
 Associations
 ============
@@ -201,8 +172,8 @@ If you want, you can simply specify the important attributes of the associated v
 You can combine the two syntaxes in deeper associations:
 
     bb_episode = Video.sample(:show => [amc, {:name => 'Breaking Bad'}])
-    puts bb_episode.show.network.name  # => 'AMC'
-    puts bb_episode.show.name     # => 'Breaking Bad'
+    puts bb_episode.show.network.name   # => 'AMC'
+    puts bb_episode.show.name           # => 'Breaking Bad'
 
 Polymorphic belongs-to associations
 -----------------------------------
@@ -338,6 +309,14 @@ You can override individual attributes, as well:
 
     bp3 = BlogPost.sample(:funny, :average_rating => 4.0)
     puts bp3.average_rating   # => 4.0
+    
+Backwards-incompatible changes in SampleModels 2
+================================================
+
+`sample` always creates a new record now. This is a change from SampleModels 1, which would first attempt to find an existing record in the database that satisfied the stated attributes. In practice, that ended up making tests too confusing.
+
+`create_sample` and `sample` now do the same thing, and `create_sample` is deprecated.
+
 
 About
 =====
