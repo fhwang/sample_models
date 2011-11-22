@@ -37,7 +37,7 @@ module SampleModels
 end
 
 Dir.entries(File.dirname(__FILE__) + "/sample_models").each do |entry|
-  if entry =~ /(.*)\.rb/
+  if entry =~ /(.*)\.rb$/
     require "sample_models/#{$1}"
   end
 end
