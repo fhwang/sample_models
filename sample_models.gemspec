@@ -4,21 +4,14 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{sample_models}
-  s.version = "2.0.0"
+  s.name = "sample_models"
+  s.version = "2.0.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Francis Hwang"]
-  s.date = %q{2011-11-22}
-  s.description = %q{
-A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:
-
-* meet all your validations automatically
-* only make you specify the attributes you care about
-* give you a rich set of features so you can specify associated values as concisely as possible
-* do this with as little configuration as possible
-}
-  s.email = %q{francis.hwang@profitably.com}
+  s.date = "2012-03-02"
+  s.description = "\nA library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:\n\n* meet all your validations automatically\n* only make you specify the attributes you care about\n* give you a rich set of features so you can specify associated values as concisely as possible\n* do this with as little configuration as possible\n"
+  s.email = "francis.hwang@profitably.com"
   s.extra_rdoc_files = [
     "README.markdown"
   ]
@@ -37,6 +30,7 @@ A library for making it extremely fast for Rails developers to set up and save A
     "lib/sample_models/initializer.rb",
     "lib/sample_models/model.rb",
     "lib/sample_models/sampler.rb",
+    "log/.gitkeep",
     "sample_models.gemspec",
     "tasks/sample_models_tasks.rake",
     "test/db/placeholder",
@@ -51,11 +45,11 @@ A library for making it extremely fast for Rails developers to set up and save A
     "test/unit/sample_test.rb",
     "uninstall.rb"
   ]
-  s.homepage = %q{http://github.com/fhwang/sample_models}
+  s.homepage = "http://github.com/fhwang/sample_models"
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.6.2}
-  s.summary = %q{A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases}
+  s.rubygems_version = "1.8.17"
+  s.summary = "A library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases"
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
