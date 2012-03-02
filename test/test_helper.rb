@@ -8,11 +8,11 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 
-require 'test/setup/schema'
+require File.expand_path(File.join(File.dirname(__FILE__), 'setup/schema'))
 require 'validates_email_format_of'
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'sample_models'
-require 'test/setup/models'
+require File.expand_path(File.join(File.dirname(__FILE__), 'setup/models'))
 require 'test/unit'
 
 class SampleModelsTestCase < Test::Unit::TestCase

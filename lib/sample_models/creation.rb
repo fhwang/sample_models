@@ -32,16 +32,22 @@ module SampleModels
     def run
       attrs = @specified_attrs.clone
       @sampler.defaults.each do |attr, val|
-        attrs[attr] = val unless attrs.member?(attr)
+        unless attrs.member?(attr) ||
+               ((assoc = model.belongs_to_association(attr)) &&
+               (attrs.member?(assoc.name) || attrs.member?(assoc.foreign_key)))
+          attrs[attr] = val
+        end
       end
-      columns_to_fill = model.columns.clone
+      columns_to_fill = model.columns.clone.reject { |c|
+        c.name == 'id' || timestamp?(c.name)
+      }
       model.validated_attr_accessors.each do |attr|
         columns_to_fill << VirtualColumn.new(attr)
       end
       columns_to_fill.each do |column|
         unless attrs.member?(column.name) || 
                specified_association_value?(column.name) ||
-               ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name)) || timestamp?(column.name)
+               ((assoc = belongs_to_assoc(column.name)) && attrs.member?(assoc.name))
           sequence = @sampler.first_pass_attribute_sequence(column)
           attrs[column.name] = sequence.value
         end

@@ -55,8 +55,8 @@ module SampleModels
           Attribute.new(@sampler, meth)
         elsif @sampler.model.belongs_to_association(meth)
           Attribute.new(@sampler, meth)
-        elsif @sampler.model.instance_methods.include?(meth.to_s) && 
-              @sampler.model.instance_methods.include?("#{meth.to_s}=")
+        elsif @sampler.model.instance_methods.map(&:to_sym).include?(meth) && 
+              @sampler.model.instance_methods.map(&:to_sym).include?("#{meth.to_s}=".to_sym)
           Attribute.new(@sampler, meth)
         elsif meth.to_s =~ /(.*)_sample$/
           @sampler.named_samples[$1] = args.first
