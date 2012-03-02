@@ -190,6 +190,10 @@ SampleModels.configure(User) do |user|
   user.external_user_id.default nil
 end
 
+SampleModels.configure(User2) do |user2|
+  user2.email.force_email_format
+end
+
 SampleModels.configure(Video) do |video|
   video.before_save do |v, sample_attrs|
     if v.episode && v.episode.show != v.show

@@ -8,6 +8,7 @@ module SampleModels
       @attribute_sequences = Hash.new { |h,k| h[k] = {} }
       @defaults = HashWithIndifferentAccess.new
       @forced_unique = []
+      @forced_email_format = []
       @named_samples = HashWithIndifferentAccess.new
       @polymorphic_default_classes = HashWithIndifferentAccess.new
     end
@@ -15,7 +16,8 @@ module SampleModels
     def attribute_sequence(pass, column)
       @attribute_sequences[pass][column.name] ||= begin
         AttributeSequence.build(
-          pass, model, column, @forced_unique.include?(column.name)
+          pass, model, column, @forced_unique.include?(column.name),
+          @forced_email_format.include?(column.name)
         )
       end
     end
@@ -29,8 +31,16 @@ module SampleModels
       attribute_sequence(:first, column)
     end
     
+    def force_email_format(attr)
+      @forced_email_format << attr.to_s
+    end
+
     def force_unique(attr)
       @forced_unique << attr.to_s
+    end
+
+    def force_email_format(attr)
+      @forced_email_format << attr.to_s
     end
 
     def model
@@ -80,6 +90,10 @@ module SampleModels
         
         def default_class(dc)
           @sampler.polymorphic_default_classes[@attribute] = dc
+        end
+
+        def force_email_format
+          @sampler.force_email_format(@attribute)
         end
         
         def force_unique

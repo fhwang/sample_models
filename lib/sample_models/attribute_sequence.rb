@@ -37,9 +37,9 @@ module SampleModels
     end
     
     class Builder
-      def initialize(pass, model, column, force_unique)
-        @pass, @model, @column, @force_unique =
-          pass, model, column, force_unique
+      def initialize(pass, model, column, force_unique, force_email_format)
+        @pass, @model, @column, @force_unique, @force_email_format =
+          pass, model, column, force_unique, force_email_format
       end
       
       def base
@@ -51,6 +51,11 @@ module SampleModels
   
       def run
         input = base
+        if @force_email_format
+          input = ValidatesEmailFormatOfAttributeSequence.new(
+            @model, @column, nil, input
+          )
+        end
         uniqueness_validation = if @force_unique
           Model::Validation.new(:validates_uniqueness_of)
         end

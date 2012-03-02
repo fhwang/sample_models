@@ -280,6 +280,18 @@ By default, SampleModels fills polymorphic associations with any record, chosen 
       bookmark.bookmarkable.default_class BlogPost
     end
 
+force_email_format
+------------------
+
+Use `force_email_format` if you want to ensure that for every newly
+created instance, the field will be a valid email. This has the same
+effect as `validates_email_format_of`, but won't change the behavior of
+production code.
+
+    SampleModels.configure(User) do |user|
+      user.email.force_email_format
+    end
+
 force_unique
 ------------
 Use `force_unique` if you want to ensure that for every newly created instance, the field will be unique. This has the same effect as `validates_uniqueness_of`, but won't change how production code behaves.

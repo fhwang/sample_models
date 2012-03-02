@@ -42,6 +42,13 @@ class ConfigurationTest < SampleModelsTestCase
     assert_nil bp.published_at
   end
 
+  def test_force_email_format
+    10.times do
+      user2 = User2.sample
+      assert_match /^.*@.*\..*/, user2.email
+    end
+  end
+
   def test_before_save
     assert_difference('Video.count') do
       assert_difference('Episode.count') do

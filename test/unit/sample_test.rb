@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/../test_helper"
+require File.expand_path(File.join(File.dirname(__FILE__), '/../test_helper'))
 
 class SampleTest < SampleModelsTestCase
   def test_fills_non_validated_non_configured_fields_with_a_non_blank_value
@@ -109,6 +109,7 @@ class SampleTest < SampleModelsTestCase
   
   def test_string_which_is_required_to_be_present_and_unique
     # Ensuring that it doesn't get tripped up by a pre-existing record
+    User2.destroy_all
     User2.create!(:login => 'login 1')
     User2.sample
   end
