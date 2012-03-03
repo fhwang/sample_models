@@ -73,13 +73,6 @@ class ConfigurationTest < SampleModelsTestCase
     end
   end
   
-  def test_validate_uniqueness_with_an_allow_nil_allows_nil_configuration
-    User.sample
-    user = User.sample
-    assert_nil user.external_user
-    assert_nil user.external_user_id
-  end
-  
   def test_attr_accessor_can_have_configured_default
     blog_post = BlogPost.sample
     assert_equal('I am an instance attribute', blog_post.instance_attribute)
