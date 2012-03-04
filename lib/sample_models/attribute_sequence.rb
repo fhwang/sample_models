@@ -1,31 +1,35 @@
 module SampleModels
   module AttributeSequence
     def self.build(pass, model, column, force_unique, force_email_format)
-      sequence = nil
+      sequence = source(pass, model, column, force_email_format)
       validations = model.validations(column.name)
-      belongs_to_assocs = model.belongs_to_associations
-      if force_email_format
-        sequence = EmailSource.new
-      elsif assoc = belongs_to_assocs.detect { |a| a.foreign_key == column.name }
-        if validations.any?(&:presence?)
-          sequence = RequiredBelongsToSource.new(assoc)
-        elsif pass == :first
-          sequence = FirstPassBelongsToSource.new
-        else
-          sequence = SecondPassBelongsToSource.new(model, assoc)
-        end
-      elsif validations.any?(&:email_format?)
-        sequence = EmailSource.new
-      elsif v = validations.detect(&:inclusion?)
-        sequence = InclusionSource.new(v)
-      else
-        sequence = SimpleSource.new(column)
-      end
       if (v = validations.detect(&:uniqueness?)) || force_unique
         v ||= Model::Validation.new(:validates_uniqueness_of) 
         sequence = UniquenessFilter.new(model, column, v, sequence)
       end 
       sequence
+    end
+
+    def self.source(pass, model, column, force_email_format)
+      validations = model.validations(column.name)
+      belongs_to_assocs = model.belongs_to_associations
+      if force_email_format
+        EmailSource.new
+      elsif assoc = belongs_to_assocs.detect { |a| a.foreign_key == column.name }
+        if validations.any?(&:presence?)
+          RequiredBelongsToSource.new(assoc)
+        elsif pass == :first
+          FirstPassBelongsToSource.new
+        else
+          SecondPassBelongsToSource.new(model, assoc)
+        end
+      elsif validations.any?(&:email_format?)
+        EmailSource.new
+      elsif v = validations.detect(&:inclusion?)
+        InclusionSource.new(v)
+      else
+        SimpleSource.new(column)
+      end
     end
 
     class AbstractSource
