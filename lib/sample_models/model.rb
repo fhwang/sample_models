@@ -88,21 +88,16 @@ module SampleModels
       def initialize(type, config = {})
         @type, @config = type, config
       end
-      
-      def email_format?
-        @type == :validates_email_format_of
-      end
-      
-      def inclusion?
-        @type == :validates_inclusion_of
-      end
-      
-      def presence?
-        @type == :validates_presence_of
-      end
 
-      def uniqueness?
-        @type == :validates_uniqueness_of
+      def method_missing(meth, *args, &block)
+        type_predicates = %w(
+          email_format? inclusion? length? presence? uniqueness?
+        )
+        if type_predicates.include?(meth.to_s)
+          @type == "validates_#{meth.to_s.chop}_of".to_sym
+        else
+          super
+        end
       end
     end
   end

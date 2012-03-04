@@ -90,7 +90,10 @@ class SampleTest < SampleModelsTestCase
   def test_string_which_is_required_to_be_present_and_unique
     # Ensuring that it doesn't get tripped up by a pre-existing record
     User2.destroy_all
-    User2.create!(:login => 'login 1')
+    User2.create!(
+      :login => 'login 1', :token1 => 'a' * 40, :token2 => 'a' * 4,
+      :token3 => 'a' * 20, :token4 => 'a' * 20
+    )
     User2.sample
   end
   

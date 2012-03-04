@@ -17,7 +17,7 @@ module SampleModels
     def intercept_validation_definitions
       validations_to_intercept = [
         :validates_email_format_of, :validates_inclusion_of,
-        :validates_presence_of, :validates_uniqueness_of
+        :validates_length_of, :validates_presence_of, :validates_uniqueness_of
       ]
       optional_interceptions = [:validates_email_format_of]
       validations_to_intercept.each do |validation|

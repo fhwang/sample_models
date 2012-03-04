@@ -117,6 +117,13 @@ validates_inclusion_of
 SampleModels will set the attribute to one of the specified values.
 
 
+validates_length_of
+-------------------
+
+SampleModels will set the attribute to a string within the specified
+length constraints.
+
+
 validates_uniqueness_of
 -----------------------
 

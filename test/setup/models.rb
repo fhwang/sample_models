@@ -99,6 +99,11 @@ end
 class User2 < ActiveRecord::Base
   validates_presence_of   :login
   validates_uniqueness_of :login
+  validates_length_of     :token1, :minimum => 40
+  validates_length_of     :token2, :maximum => 4
+  validates_uniqueness_of :token2
+  validates_length_of     :token3, :within => (20..40)
+  validates_length_of     :token4, :in => (20..40)
 end
 
 class UserWithPassword < ActiveRecord::Base

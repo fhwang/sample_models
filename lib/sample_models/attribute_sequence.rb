@@ -27,6 +27,8 @@ module SampleModels
         EmailSource.new
       elsif v = validations.detect(&:inclusion?)
         InclusionSource.new(v)
+      elsif v = validations.detect(&:length?)
+        LengthSource.new(v)
       else
         SimpleSource.new(column)
       end
@@ -63,6 +65,29 @@ module SampleModels
 
       def value
         @validation.config[:in].first
+      end
+    end
+    
+    class LengthSource < AbstractSource
+      def initialize(validation)
+        super()
+        @validation = validation
+      end
+
+      def value
+        minimum = @validation.config[:minimum]
+        minimum ||= (
+          @validation.config[:within] && @validation.config[:within].begin
+        )
+        minimum ||= (
+          @validation.config[:in] && @validation.config[:in].begin
+        )
+        minimum ||= 1
+        value = 'a' * minimum
+        @number.times do
+          value = value.succ
+        end
+        value
       end
     end
 

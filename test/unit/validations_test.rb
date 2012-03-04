@@ -27,5 +27,18 @@ class ValidationsTest < SampleModelsTestCase
       end
     end
   end
+
+  def test_validates_length_of
+    token2s = []
+    50.times do
+      user2 = User2.sample
+      assert(user2.token1.length >= 40)
+      assert(user2.token2.length <= 4)
+      token2s << user2.token2
+      assert(user2.token3.length >= 20 && user2.token3.length <= 40)
+      assert(user2.token4.length >= 20 && user2.token4.length <= 40)
+    end
+    assert_equal(token2s.size, token2s.uniq.size)
+  end
 end
   
