@@ -100,6 +100,10 @@ module SampleModels
       def presence?
         @type == :validates_presence_of
       end
+
+      def uniqueness?
+        @type == :validates_uniqueness_of
+      end
     end
   end
 end

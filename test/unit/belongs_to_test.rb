@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/../test_helper"
+require File.expand_path(File.join(File.dirname(__FILE__), '/../test_helper'))
 
 class BelongsToTest < SampleModelsTestCase
   def test_associated_with_belongs_to_recipient_by_default
