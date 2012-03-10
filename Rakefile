@@ -8,7 +8,7 @@ Rake::TestTask.new do |t|
   t.verbose = true
 end
 
-ActiveRecordVersions = %w(3.1.1 3.0.10 2.3.14)
+ActiveRecordVersions = %w(3.2.2 3.1.1 3.0.10 2.3.14)
 
 desc "Run all tests, for all tested versions of ActiveRecord"
 task :all_tests do
