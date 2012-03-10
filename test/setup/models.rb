@@ -61,6 +61,7 @@ class ExternalUser < ActiveRecord::Base
 end
 
 class Network < ActiveRecord::Base
+  attr_accessible nil
 end
 
 class Show < ActiveRecord::Base

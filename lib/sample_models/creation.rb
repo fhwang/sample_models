@@ -52,7 +52,10 @@ module SampleModels
           attrs[column.name] = sequence.value
         end
       end
-      @instance = model.new(attrs)
+      @instance = model.new
+      attrs.each do |k, v|
+        @instance.send("#{k}=", v)
+      end
       save!
       update_with_deferred_associations!
       @instance
