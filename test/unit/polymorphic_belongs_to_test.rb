@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/../test_helper"
+require File.expand_path(File.join(File.dirname(__FILE__), '/../test_helper'))
 
 class PolymorphicBelongsToTest < SampleModelsTestCase
   def test_fills_association_with_anything_from_another_class
@@ -12,6 +12,11 @@ class PolymorphicBelongsToTest < SampleModelsTestCase
     blog_post = BlogPost.sample
     bookmark = Bookmark.sample :bookmarkable => blog_post
     assert_equal blog_post, bookmark.bookmarkable
+    assert(
+      Bookmark.all(
+        :conditions => {:bookmarkable_type => 'BlogPost'}
+      ).include?(bookmark)
+    )
   end
   
   def test_can_specify_association_with_other_leading_associations

@@ -9,7 +9,8 @@ module SampleModels
     
     def belongs_to_assoc(column_name)
       model.belongs_to_associations.detect { |assoc|
-        assoc.foreign_key == column_name
+        assoc.foreign_key == column_name ||
+          assoc.foreign_type == column_name
       }
     end
     

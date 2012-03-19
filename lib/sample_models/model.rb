@@ -72,6 +72,14 @@ module SampleModels
           @assoc.primary_key_name
         end
       end
+
+      def foreign_type
+        if @assoc.respond_to?(:foreign_type)
+          @assoc.foreign_type
+        else
+          @assoc.instance_variable_get(:@options)[:foreign_type]
+        end
+      end
       
       def has_many?
         @assoc.macro == :has_many
