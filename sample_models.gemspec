@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "sample_models"
-  s.version = "2.3.0"
+  s.version = "2.3.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Francis Hwang"]
-  s.date = "2012-03-10"
+  s.date = "2012-03-19"
   s.description = "\nA library for making it extremely fast for Rails developers to set up and save ActiveRecord instances when writing test cases. It aims to:\n\n* meet all your validations automatically\n* only make you specify the attributes you care about\n* give you a rich set of features so you can specify associated values as concisely as possible\n* do this with as little configuration as possible\n"
   s.email = "francis.hwang@profitably.com"
   s.extra_rdoc_files = [
